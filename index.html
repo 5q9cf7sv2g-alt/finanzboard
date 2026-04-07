@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Finanz Bordcomputer</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0e0f11;--surface:#161719;--surface2:#1c1e20;--border:#252729;
+  --text:#e8e9ea;--muted:#5a5d62;--accent:#c8f542;
+  --ok:#42f5a6;--warn:#f5c842;--danger:#f55142;--info:#4294f5;--purple:#b4a0f5;
+  --mono:'DM Mono',monospace;--sans:'Syne',sans-serif;
+  --safe-top:env(safe-area-inset-top,0px);--safe-bottom:env(safe-area-inset-bottom,0px);
+}
+html{overflow-x:hidden}
+body{background:var(--bg);color:var(--text);font-family:var(--mono);min-height:100vh;width:100%;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding-bottom:calc(68px + var(--safe-bottom))}
+
+.tab-bar{position:fixed;bottom:0;left:0;right:0;background:rgba(14,15,17,.96);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid var(--border);display:flex;z-index:100;padding-bottom:var(--safe-bottom)}
+.tab-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:9px 2px 7px;gap:3px;background:none;border:none;cursor:pointer;color:var(--muted);font-family:var(--mono);font-size:8px;letter-spacing:.04em;transition:color .2s;-webkit-tap-highlight-color:transparent;white-space:nowrap}
+.tab-btn.active{color:var(--accent)}
+.tab-icon{font-size:16px;line-height:1}
+
+.page{display:none;padding:0 14px 20px;animation:fadeIn .2s ease}
+.page.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+
+.page-header{position:sticky;top:0;background:rgba(14,15,17,.96);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);padding:calc(var(--safe-top) + 14px) 14px 11px;margin:0 -14px 14px;z-index:50;border-bottom:1px solid var(--border)}
+.page-title{font-family:var(--sans);font-size:20px;font-weight:800;letter-spacing:-.03em;line-height:1}
+.page-title span{color:var(--accent)}
+.page-sub{font-size:10px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-top:3px;display:flex;justify-content:space-between;align-items:center}
+
+.section-label{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:16px 0 7px}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:10px}
+
+.banner{border-radius:14px;padding:12px 14px;margin-bottom:10px;border:1px solid var(--border);background:var(--surface);display:flex;align-items:center;gap:10px}
+.banner-dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex-shrink:0}
+.banner-label{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.banner-text{font-size:13px;color:var(--text);margin-top:2px;font-family:var(--sans);font-weight:700}
+
+.topf-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:10px;position:relative;overflow:hidden}
+.topf-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--tc,var(--border))}
+.topf-header{display:flex;justify-content:space-between;align-items:flex-start}
+.topf-name{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.topf-badge{font-size:9px;padding:2px 7px;border-radius:99px;border:1px solid var(--tc,var(--border));color:var(--tc,var(--muted))}
+.topf-amount{font-family:var(--sans);font-size:26px;font-weight:800;letter-spacing:-.04em;color:var(--tc,var(--text));margin:5px 0 3px;line-height:1}
+.topf-desc{font-size:11px;color:var(--muted);line-height:1.5}
+.bar-wrap{margin-top:9px}
+.bar-track{height:3px;background:var(--border);border-radius:99px;overflow:hidden}
+.bar-fill{height:100%;border-radius:99px;background:var(--tc,var(--accent));transition:width .7s cubic-bezier(.22,1,.36,1)}
+.bar-labels{display:flex;justify-content:space-between;font-size:9px;color:var(--muted);margin-top:3px}
+
+.prog-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.prog-row:last-child{margin-bottom:0}
+.prog-name{font-size:11px;color:var(--muted);width:88px;flex-shrink:0}
+.prog-track{flex:1;height:4px;background:var(--border);border-radius:99px;overflow:hidden}
+.prog-fill{height:100%;border-radius:99px;transition:width .7s cubic-bezier(.22,1,.36,1)}
+.prog-pct{font-size:11px;width:32px;text-align:right}
+
+.input-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:10px}
+.input-row{display:flex;align-items:center;padding:0 14px;border-bottom:1px solid var(--border);min-height:52px}
+.input-row:last-child{border-bottom:none}
+.input-label{font-size:13px;color:var(--text);flex:1;min-width:0}
+.input-label small{display:block;font-size:10px;color:var(--muted);margin-top:1px}
+.input-field{background:none;border:none;outline:none;color:var(--accent);font-family:var(--mono);font-size:16px;font-weight:500;text-align:right;width:110px;-webkit-appearance:none;padding:14px 0}
+.input-field::placeholder{color:var(--border);font-size:14px}
+.input-suffix{color:var(--muted);font-size:13px;margin-left:4px}
+
+.btn{width:100%;border:none;border-radius:12px;padding:15px;font-family:var(--mono);font-size:13px;font-weight:500;letter-spacing:.06em;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:opacity .15s;margin-bottom:10px}
+.btn:active{opacity:.8}
+.btn-accent{background:var(--accent);color:#0e0f11}
+.btn-surface{background:var(--surface);color:var(--text);border:1px solid var(--border)}
+.btn-danger{background:#2a0808;color:var(--danger);border:1px solid #3a1010}
+.btn-sm{padding:8px 14px;font-size:11px;border-radius:8px;width:auto;margin-bottom:0}
+
+.table-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:10px}
+.group-header{background:var(--surface2);padding:8px 14px;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);display:flex;justify-content:space-between;align-items:center}
+.group-header .add-btn{background:none;border:1px solid var(--border);border-radius:6px;color:var(--accent);font-size:11px;padding:3px 8px;cursor:pointer;font-family:var(--mono);-webkit-tap-highlight-color:transparent}
+
+.zahl-row{display:flex;align-items:center;padding:11px 14px;border-top:1px solid var(--border);gap:7px}
+.zahl-row:first-child{border-top:none}
+.zahl-check{width:20px;height:20px;border-radius:6px;border:1px solid var(--border);background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;-webkit-tap-highlight-color:transparent;color:transparent;transition:all .15s}
+.zahl-check.done{background:var(--ok);border-color:var(--ok);color:#0e0f11}
+.zahl-date{font-size:10px;color:var(--muted);width:36px;flex-shrink:0}
+.zahl-name{font-size:13px;color:var(--text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.zahl-name.done-text{color:var(--muted);text-decoration:line-through}
+.zahl-amount{font-size:12px;font-weight:500;color:var(--danger);flex-shrink:0}
+.zahl-del{background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;padding:0 0 0 4px;-webkit-tap-highlight-color:transparent;flex-shrink:0}
+
+.topf-pill{font-size:9px;padding:2px 6px;border-radius:4px;flex-shrink:0;white-space:nowrap}
+.pill-giro{background:#0d2018;color:var(--ok)}
+.pill-auto{background:#201808;color:var(--warn)}
+.pill-vers{background:#081428;color:var(--info)}
+.pill-alt{background:#200808;color:var(--danger)}
+.pill-urlaub{background:#130d28;color:var(--purple)}
+.pill-leben{background:#1a1a1a;color:var(--muted)}
+
+.peak-item{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-top:1px solid var(--border)}
+.peak-item:first-child{border-top:none}
+.peak-month{font-size:13px;color:var(--text)}
+.peak-note{font-size:10px;color:var(--muted);margin-top:2px}
+.peak-amount{font-family:var(--sans);font-size:17px;font-weight:800;color:var(--warn)}
+.peak-area{font-size:9px;padding:2px 7px;border-radius:4px;background:#201808;color:var(--warn);margin-top:3px;display:inline-block}
+.peak-actions{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+
+.regel-row{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border-top:1px solid var(--border)}
+.regel-row:first-child{border-top:none}
+.regel-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:4px}
+.regel-text{font-size:12px;color:var(--text)}
+.regel-sub{font-size:10px;color:var(--muted);margin-top:2px}
+
+.grenzen-row{display:flex;align-items:center;padding:10px 14px;border-top:1px solid var(--border);gap:6px}
+.grenzen-row:first-child{border-top:none}
+.grenzen-name{font-size:12px;color:var(--text);flex:1}
+.grenzen-krit{font-size:10px;color:var(--danger)}
+.grenzen-ok{font-size:10px;color:var(--ok)}
+.grenzen-deck{font-size:10px;color:var(--warn)}
+
+.grundsatz{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px 14px;text-align:center;margin-top:8px}
+.grundsatz-main{font-family:var(--sans);font-size:15px;font-weight:800;color:var(--accent);letter-spacing:-.02em}
+.grundsatz-sub{font-size:10px;color:var(--muted);margin-top:5px;line-height:1.7}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;display:flex;align-items:flex-end;justify-content:center;animation:fadeIn .2s ease}
+.modal-overlay.hidden{display:none}
+.modal{background:var(--surface);border-radius:20px 20px 0 0;padding:20px 16px calc(20px + var(--safe-bottom));width:100%;max-height:90vh;overflow-y:auto}
+.modal-title{font-family:var(--sans);font-size:16px;font-weight:800;margin-bottom:16px;color:var(--accent)}
+.modal-field{margin-bottom:12px}
+.modal-field label{display:block;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
+.modal-field input,.modal-field select{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--mono);font-size:15px;padding:12px;outline:none;-webkit-appearance:none}
+.modal-field input:focus,.modal-field select:focus{border-color:var(--accent)}
+.modal-field select option{background:var(--surface)}
+.modal-btns{display:flex;gap:8px;margin-top:16px}
+.modal-btns .btn{margin-bottom:0}
+
+/* MONAT SELECTOR */
+.monat-selector{display:flex;align-items:center;gap:8px}
+.monat-nav{background:none;border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:16px;width:32px;height:32px;cursor:pointer;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent;flex-shrink:0}
+.monat-label{font-size:13px;color:var(--accent);font-weight:500;flex:1;text-align:center}
+
+/* ARCHIVE */
+.archive-item{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-top:1px solid var(--border)}
+.archive-item:first-child{border-top:none}
+.archive-month{font-size:13px;color:var(--text)}
+.archive-sub{font-size:10px;color:var(--muted);margin-top:2px}
+.archive-load{background:none;border:1px solid var(--border);border-radius:6px;color:var(--accent);font-size:11px;padding:4px 10px;cursor:pointer;font-family:var(--mono);-webkit-tap-highlight-color:transparent}
+
+.last-update{font-size:11px;color:var(--muted)}
+</style>
+</head>
+<body>
+
+<!-- DASHBOARD -->
+<div class="page active" id="page-dash">
+  <div class="page-header">
+    <div class="page-title">FINANZ<span>BOARD</span></div>
+    <div class="page-sub">
+      <span id="dash-monat-label">–</span>
+      <span class="last-update" id="dash-last-update"></span>
+    </div>
+  </div>
+
+  <div class="banner" id="sys-banner">
+    <div class="banner-dot" id="sys-dot"></div>
+    <div>
+      <div class="banner-label">Systemstatus</div>
+      <div class="banner-text" id="sys-text">Kontostände eingeben →</div>
+    </div>
+  </div>
+
+  <div id="topf-cards">
+    <div class="topf-card" id="tc-giro"><div class="topf-card::before"></div>
+      <div class="topf-header"><div class="topf-name">Giro</div><div class="topf-badge" id="tb-giro">–</div></div>
+      <div class="topf-amount" id="tv-giro">– €</div>
+      <div class="topf-desc" id="td-giro">Noch kein Stand</div>
+      <div class="bar-wrap"><div class="bar-track"><div class="bar-fill" id="bar-giro" style="width:0%"></div></div><div class="bar-labels"><span>0</span><span>300</span><span>1.000</span></div></div>
+    </div>
+    <div class="topf-card" id="tc-auto">
+      <div class="topf-header"><div class="topf-name">Auto Topf ★</div><div class="topf-badge" id="tb-auto">–</div></div>
+      <div class="topf-amount" id="tv-auto">– €</div>
+      <div class="topf-desc" id="td-auto">Noch kein Stand</div>
+      <div class="bar-wrap"><div class="bar-track"><div class="bar-fill" id="bar-auto" style="width:0%"></div></div><div class="bar-labels"><span>0</span><span>1.200</span><span>2.700</span></div></div>
+    </div>
+    <div class="topf-card" id="tc-vers">
+      <div class="topf-header"><div class="topf-name">Versicherung</div><div class="topf-badge" id="tb-vers">–</div></div>
+      <div class="topf-amount" id="tv-vers">– €</div>
+      <div class="topf-desc" id="td-vers">Noch kein Stand</div>
+      <div class="bar-wrap"><div class="bar-track"><div class="bar-fill" id="bar-vers" style="width:0%"></div></div><div class="bar-labels"><span>0</span><span>85</span><span>300</span></div></div>
+    </div>
+    <div class="topf-card" id="tc-not">
+      <div class="topf-header"><div class="topf-name">Notgroschen</div><div class="topf-badge" id="tb-not">–</div></div>
+      <div class="topf-amount" id="tv-not">– €</div>
+      <div class="topf-desc" id="td-not">Noch kein Stand</div>
+      <div class="bar-wrap"><div class="bar-track"><div class="bar-fill" id="bar-not" style="width:0%"></div></div><div class="bar-labels"><span>0</span><span>500</span><span>1.500</span></div></div>
+    </div>
+    <div class="topf-card" id="tc-urlaub">
+      <div class="topf-header"><div class="topf-name">Urlaub</div><div class="topf-badge" id="tb-urlaub">–</div></div>
+      <div class="topf-amount" id="tv-urlaub">– €</div>
+      <div class="topf-desc" id="td-urlaub">Noch kein Stand</div>
+      <div class="bar-wrap"><div class="bar-track"><div class="bar-fill" id="bar-urlaub" style="width:0%"></div></div><div class="bar-labels"><span>0</span><span>1.000</span><span>3.000</span></div></div>
+    </div>
+  </div>
+
+  <div class="section-label">Zielerfüllung</div>
+  <div class="card">
+    <div class="prog-row"><div class="prog-name">Giro Sockel</div><div class="prog-track"><div class="prog-fill" id="prog-giro" style="width:0%;background:var(--ok)"></div></div><div class="prog-pct" id="pct-giro" style="color:var(--ok)">–</div></div>
+    <div class="prog-row"><div class="prog-name">Auto Topf</div><div class="prog-track"><div class="prog-fill" id="prog-auto" style="width:0%;background:var(--warn)"></div></div><div class="prog-pct" id="pct-auto" style="color:var(--warn)">–</div></div>
+    <div class="prog-row"><div class="prog-name">Notgroschen</div><div class="prog-track"><div class="prog-fill" id="prog-not" style="width:0%;background:var(--danger)"></div></div><div class="prog-pct" id="pct-not" style="color:var(--danger)">–</div></div>
+    <div class="prog-row"><div class="prog-name">Urlaub</div><div class="prog-track"><div class="prog-fill" id="prog-urlaub" style="width:0%;background:var(--purple)"></div></div><div class="prog-pct" id="pct-urlaub" style="color:var(--purple)">–</div></div>
+  </div>
+
+  <div class="grundsatz">
+    <div class="grundsatz-main" id="fazit-text">Kontostände eingeben um zu starten</div>
+    <div class="grundsatz-sub">Keine Altlasten · Töpfe zahlen alles<br>Giro stabil · Keine Überraschungen</div>
+  </div>
+</div>
+
+<!-- EINGABE -->
+<div class="page" id="page-input">
+  <div class="page-header">
+    <div class="page-title">EINGABE</div>
+    <div class="page-sub">
+      <div class="monat-selector">
+        <button class="monat-nav" onclick="prevMonat()">‹</button>
+        <span class="monat-label" id="input-monat-label">–</span>
+        <button class="monat-nav" onclick="nextMonat()">›</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-label">Wöchentliche Kontostände</div>
+  <div class="input-card">
+    <div class="input-row"><div class="input-label">Giro Stand<small>Ziel: 300–1.000 €</small></div><input class="input-field" id="in-giro" type="number" inputmode="decimal" placeholder="0.00" step="0.01"><span class="input-suffix">€</span></div>
+    <div class="input-row"><div class="input-label">Auto Topf ★<small>Ziel: 1.200–2.700 €</small></div><input class="input-field" id="in-auto" type="number" inputmode="decimal" placeholder="0.00" step="0.01"><span class="input-suffix">€</span></div>
+    <div class="input-row"><div class="input-label">Versicherung<small>Ziel: 85–300 €</small></div><input class="input-field" id="in-vers" type="number" inputmode="decimal" placeholder="0.00" step="0.01"><span class="input-suffix">€</span></div>
+    <div class="input-row"><div class="input-label">Notgroschen<small>Ziel: 500–1.500 €</small></div><input class="input-field" id="in-not" type="number" inputmode="decimal" placeholder="0.00" step="0.01"><span class="input-suffix">€</span></div>
+    <div class="input-row"><div class="input-label">Urlaub<small>Ziel: 1.000–3.000 €</small></div><input class="input-field" id="in-urlaub" type="number" inputmode="decimal" placeholder="0.00" step="0.01"><span class="input-suffix">€</span></div>
+  </div>
+  <button class="btn btn-accent" onclick="saveKontostaende()">Speichern & Dashboard →</button>
+
+  <div class="section-label">Neuen Monat starten</div>
+  <div class="card" style="padding:14px">
+    <div style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.6">Fixkosten und Topf-Beträge werden als Vorlage übernommen. Zahlungen kannst du danach im Tab „Zahlungen" anpassen.</div>
+    <button class="btn btn-surface" style="margin-bottom:0" onclick="showNeuerMonatModal()">+ Neuen Monat starten</button>
+  </div>
+
+  <div class="section-label">Datensicherung</div>
+  <div class="card" style="padding:14px">
+    <div style="font-size:12px;color:var(--muted);margin-bottom:12px">Alle Daten als Backup exportieren oder wiederherstellen.</div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-surface btn-sm" onclick="exportData()">📤 Export</button>
+      <button class="btn btn-surface btn-sm" onclick="document.getElementById('import-file').click()">📥 Import</button>
+    </div>
+    <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(event)">
+  </div>
+</div>
+
+<!-- ZAHLUNGEN -->
+<div class="page" id="page-zahlung">
+  <div class="page-header">
+    <div class="page-title">ZAHLUNGEN</div>
+    <div class="page-sub"><span id="zahlung-monat-label">–</span></div>
+  </div>
+  <div id="zahlung-content"></div>
+</div>
+
+<!-- PEAK RADAR -->
+<div class="page" id="page-peak">
+  <div class="page-header">
+    <div class="page-title">PEAK <span>RADAR</span></div>
+    <div class="page-sub"><span>Kommende Belastungen</span></div>
+  </div>
+  <div class="section-label">Bevorstehende Peaks</div>
+  <div class="table-card" id="peak-list"></div>
+  <button class="btn btn-surface" onclick="showPeakModal(null)">+ Peak hinzufügen</button>
+
+  <div class="section-label">Peak-Strategie (1.500 € Beispiel)</div>
+  <div class="table-card">
+    <div class="zahl-row" style="border-top:none"><span class="zahl-name">Giro abdecken</span><span class="zahl-amount" style="color:var(--accent)">800 €</span></div>
+    <div class="zahl-row"><span class="zahl-name">Notgroschen</span><span class="zahl-amount" style="color:var(--accent)">200 €</span></div>
+    <div class="zahl-row"><span class="zahl-name">Amazon Puffer</span><span class="zahl-amount" style="color:var(--accent)">500 €</span></div>
+    <div class="zahl-row" style="background:var(--surface2)"><span class="zahl-name" style="font-size:10px;color:var(--muted)">→ Töpfe danach automatisch wiederaufbauen</span></div>
+  </div>
+</div>
+
+<!-- ARCHIV / REGELN -->
+<div class="page" id="page-mehr">
+  <div class="page-header">
+    <div class="page-title">MEHR</div>
+    <div class="page-sub"><span>Archiv & Regeln</span></div>
+  </div>
+
+  <div class="section-label">Monatsarchiv</div>
+  <div class="table-card" id="archiv-list">
+    <div style="padding:14px;font-size:12px;color:var(--muted)">Noch keine archivierten Monate</div>
+  </div>
+
+  <div class="section-label">Systemregeln</div>
+  <div class="table-card">
+    <div class="regel-row" style="border-top:none"><div class="regel-dot" style="background:var(--accent)"></div><div><div class="regel-text">Fixkosten = Pflicht</div><div class="regel-sub">Immer zuerst – nicht verhandelbar</div></div></div>
+    <div class="regel-row"><div class="regel-dot" style="background:var(--accent)"></div><div><div class="regel-text">Töpfe = Pflicht</div><div class="regel-sub">Wie Fixkosten fest eingeplant</div></div></div>
+    <div class="regel-row"><div class="regel-dot" style="background:var(--warn)"></div><div><div class="regel-text">Leben = steuerbar</div><div class="regel-sub">Hier liegt die Flexibilität</div></div></div>
+    <div class="regel-row"><div class="regel-dot" style="background:var(--danger)"></div><div><div class="regel-text">Giro darf nicht ins Minus</div><div class="regel-sub">Absolute Grenze</div></div></div>
+    <div class="regel-row"><div class="regel-dot" style="background:var(--ok)"></div><div><div class="regel-text">Kreislauf-Prinzip</div><div class="regel-sub">Töpfe nach Nutzung automatisch wiederaufbauen</div></div></div>
+  </div>
+
+  <div class="section-label">Topf-Grenzen</div>
+  <div class="table-card">
+    <div class="grenzen-row" style="border-top:none"><span class="grenzen-name">Giro</span><span class="grenzen-krit">&lt;300</span><span class="grenzen-ok">300–1.000</span><span class="grenzen-deck">&gt;1.000</span></div>
+    <div class="grenzen-row"><span class="grenzen-name">Auto Topf ★</span><span class="grenzen-krit">&lt;1.200</span><span class="grenzen-ok">1.200–2.700</span><span class="grenzen-deck">&gt;2.700</span></div>
+    <div class="grenzen-row"><span class="grenzen-name">Versicherung</span><span class="grenzen-krit">&lt;85</span><span class="grenzen-ok">85–300</span><span class="grenzen-deck">&gt;300</span></div>
+    <div class="grenzen-row"><span class="grenzen-name">Notgroschen</span><span class="grenzen-krit">&lt;500</span><span class="grenzen-ok">500–1.500</span><span class="grenzen-deck">&gt;1.500</span></div>
+    <div class="grenzen-row"><span class="grenzen-name">Urlaub</span><span class="grenzen-krit">&lt;1.000</span><span class="grenzen-ok">1.000–3.000</span><span class="grenzen-deck">&gt;3.000</span></div>
+  </div>
+
+  <div class="grundsatz">
+    <div class="grundsatz-main">Das System trägt sich selbst.</div>
+    <div class="grundsatz-sub">Keine Altlasten · Töpfe zahlen alles<br>Giro bleibt stabil · Keine Überraschungen</div>
+  </div>
+</div>
+
+<!-- TAB BAR -->
+<nav class="tab-bar">
+  <button class="tab-btn active" onclick="switchTab('dash',this)"><span class="tab-icon">◎</span><span>Board</span></button>
+  <button class="tab-btn" onclick="switchTab('input',this)"><span class="tab-icon">✎</span><span>Eingabe</span></button>
+  <button class="tab-btn" onclick="switchTab('zahlung',this)"><span class="tab-icon">≡</span><span>Zahlungen</span></button>
+  <button class="tab-btn" onclick="switchTab('peak',this)"><span class="tab-icon">⚡</span><span>Peaks</span></button>
+  <button class="tab-btn" onclick="switchTab('mehr',this)"><span class="tab-icon">◈</span><span>Mehr</span></button>
+</nav>
+
+<!-- MODALS -->
+<div class="modal-overlay hidden" id="modal-zahlung">
+  <div class="modal">
+    <div class="modal-title" id="modal-zahlung-title">Zahlung hinzufügen</div>
+    <div class="modal-field"><label>Datum</label><input type="text" id="mz-datum" placeholder="z.B. 15.04."></div>
+    <div class="modal-field"><label>Bezeichnung</label><input type="text" id="mz-name" placeholder="z.B. Werkstatt"></div>
+    <div class="modal-field"><label>Betrag (€)</label><input type="number" id="mz-betrag" inputmode="decimal" placeholder="0.00" step="0.01"></div>
+    <div class="modal-field"><label>Kategorie</label>
+      <select id="mz-topf">
+        <option value="Giro">Fixkosten (Giro)</option>
+        <option value="Auto">Auto Topf</option>
+        <option value="Versicherung">Versicherungstopf</option>
+        <option value="Leben">Leben</option>
+        <option value="Altlast">Altlast</option>
+        <option value="Urlaub">Urlaubstopf</option>
+      </select>
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-surface" onclick="closeModal('modal-zahlung')">Abbrechen</button>
+      <button class="btn btn-accent" onclick="saveZahlung()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-peak">
+  <div class="modal">
+    <div class="modal-title" id="modal-peak-title">Peak hinzufügen</div>
+    <div class="modal-field"><label>Monat / Zeitraum</label><input type="text" id="mp-monat" placeholder="z.B. Mai 2026"></div>
+    <div class="modal-field"><label>Betrag (€)</label><input type="number" id="mp-betrag" inputmode="decimal" placeholder="0.00" step="0.01"></div>
+    <div class="modal-field"><label>Bereich</label><input type="text" id="mp-bereich" placeholder="z.B. Auto, Strafe"></div>
+    <div class="modal-field"><label>Notiz</label><input type="text" id="mp-notiz" placeholder="z.B. Jahresinspektion"></div>
+    <input type="hidden" id="mp-edit-id">
+    <div class="modal-btns">
+      <button class="btn btn-surface" onclick="closeModal('modal-peak')">Abbrechen</button>
+      <button class="btn btn-accent" onclick="savePeak()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-neuer-monat">
+  <div class="modal">
+    <div class="modal-title">Neuen Monat starten</div>
+    <div class="modal-field"><label>Monat</label>
+      <select id="nm-monat">
+        <option value="1">Januar</option><option value="2">Februar</option><option value="3">März</option>
+        <option value="4">April</option><option value="5">Mai</option><option value="6">Juni</option>
+        <option value="7">Juli</option><option value="8">August</option><option value="9">September</option>
+        <option value="10">Oktober</option><option value="11">November</option><option value="12">Dezember</option>
+      </select>
+    </div>
+    <div class="modal-field"><label>Jahr</label><input type="number" id="nm-jahr" value="2026" min="2024" max="2030"></div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Fixkosten und Standard-Zahlungen werden übernommen. Du kannst danach alles anpassen.</div>
+    <div class="modal-btns">
+      <button class="btn btn-surface" onclick="closeModal('modal-neuer-monat')">Abbrechen</button>
+      <button class="btn btn-accent" onclick="createNeuerMonat()">Monat erstellen</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══ STATE ══════════════════════════════════════════════════════════════════
+const MONAT_NAMEN = ['','Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+
+const LIMITS = {
+  giro:{krit:300,oben:1000},auto:{krit:1200,oben:2700},
+  vers:{krit:85,oben:300},not:{krit:500,oben:1500},urlaub:{krit:1000,oben:3000}
+};
+const TARGETS = {giro:1000,auto:2700,not:1500,urlaub:3000};
+const TEXTS = {
+  giro:{krit:'Giro unter Druck',ok:'Giro im Zielbereich',deck:'Überschuss umleiten'},
+  auto:{krit:'Infrastruktur gefährdet',ok:'Auto Topf stabil',deck:'Auto Topf → umleiten'},
+  vers:{krit:'Versicherungen ungedeckt',ok:'Versicherung gedeckt',deck:'Versicherung prüfen'},
+  not:{krit:'Sicherheitsnetz zu klein',ok:'Notgroschen OK',deck:'Investieren?'},
+  urlaub:{krit:'Keine Erholungsreserve',ok:'Urlaub planbar',deck:'Urlaub Topf voll'}
+};
+
+// Standard-Zahlungen Vorlage (April 2026)
+const STANDARD_ZAHLUNGEN = [
+  {id:'fix1',datum:'30.03.',name:'Vodafone',betrag:67.97,topf:'Giro',paid:false},
+  {id:'fix2',datum:'31.03.',name:'LBS',betrag:30.00,topf:'Giro',paid:false},
+  {id:'fix3',datum:'01.',name:'Condor',betrag:118.30,topf:'Giro',paid:false},
+  {id:'fix4',datum:'01.',name:'WWK',betrag:41.00,topf:'Giro',paid:false},
+  {id:'fix5',datum:'07.',name:'DAZN',betrag:9.99,topf:'Giro',paid:false},
+  {id:'fix6',datum:'07.',name:'Finanzguru',betrag:2.99,topf:'Giro',paid:false},
+  {id:'fix7',datum:'14.',name:'Apple',betrag:34.95,topf:'Giro',paid:false},
+  {id:'fix8',datum:'14.',name:'LVB',betrag:15.00,topf:'Giro',paid:false},
+  {id:'fix9',datum:'17.',name:'Tado',betrag:3.99,topf:'Giro',paid:false},
+  {id:'fix10',datum:'17.',name:'Mobilcom',betrag:7.99,topf:'Giro',paid:false},
+  {id:'fix11',datum:'20.',name:'Kreditkarte',betrag:2.49,topf:'Giro',paid:false},
+  {id:'fix12',datum:'23.',name:'KS Auxilia',betrag:23.95,topf:'Giro',paid:false},
+  {id:'fix13',datum:'23.',name:'ChatGPT',betrag:7.99,topf:'Giro',paid:false},
+  {id:'vers1',datum:'15.',name:'GEZ',betrag:55.08,topf:'Versicherung',paid:false},
+  {id:'life1',datum:'10.',name:'Tanken',betrag:380.00,topf:'Leben',paid:false},
+  {id:'life2',datum:'30.',name:'Lebensmittel',betrag:400.00,topf:'Leben',paid:false},
+  {id:'life3',datum:'30.',name:'Lifestyle',betrag:300.00,topf:'Leben',paid:false},
+];
+
+const STANDARD_PEAKS = [
+  {id:'p1',monat:'Mai 2026',betrag:1500,bereich:'Strafe',notiz:'⚠ Strafe – Peak-Strategie aktiv'},
+  {id:'p2',monat:'Juni 2026',betrag:406,bereich:'Auto',notiz:'Regelmäßige Kosten'},
+  {id:'p3',monat:'Juli 2026',betrag:400,bereich:'Auto',notiz:'Regelmäßige Kosten'},
+  {id:'p4',monat:'August 2026',betrag:800,bereich:'Auto',notiz:'Größere Reparatur geplant'},
+  {id:'p5',monat:'Januar 2027',betrag:1200,bereich:'Auto',notiz:'Jahreskosten / Steuer'},
+];
+
+function loadState() {
+  try { return JSON.parse(localStorage.getItem('finanz_v2') || 'null'); } catch(e) { return null; }
+}
+function saveState(s) {
+  localStorage.setItem('finanz_v2', JSON.stringify(s));
+}
+function initState() {
+  const saved = loadState();
+  if (saved) return saved;
+  const state = {
+    aktiverMonat: '2026-04',
+    monate: {
+      '2026-04': {
+        label: 'April 2026',
+        kontostaende: {giro:null,auto:null,vers:null,not:null,urlaub:null},
+        lastUpdate: null,
+        zahlungen: JSON.parse(JSON.stringify(STANDARD_ZAHLUNGEN)).map((z,i) => ({...z, id:'z'+Date.now()+i}))
+      }
+    },
+    peaks: JSON.parse(JSON.stringify(STANDARD_PEAKS)),
+    editZahlungId: null,
+    editZahlungMonat: null,
+  };
+  saveState(state);
+  return state;
+}
+
+let STATE = initState();
+
+// ══ NAV ═══════════════════════════════════════════════════════════════════
+function switchTab(id, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  btn.classList.add('active');
+  window.scrollTo({top:0,behavior:'instant'});
+  if (id === 'zahlung') renderZahlungen();
+  if (id === 'peak') renderPeaks();
+  if (id === 'mehr') renderArchiv();
+  if (id === 'dash') renderDashboard();
+}
+
+// ══ MONAT NAV ═════════════════════════════════════════════════════════════
+function monatKeys() {
+  return Object.keys(STATE.monate).sort();
+}
+function prevMonat() {
+  const keys = monatKeys();
+  const idx = keys.indexOf(STATE.aktiverMonat);
+  if (idx > 0) { STATE.aktiverMonat = keys[idx-1]; saveState(STATE); refreshAll(); }
+}
+function nextMonat() {
+  const keys = monatKeys();
+  const idx = keys.indexOf(STATE.aktiverMonat);
+  if (idx < keys.length-1) { STATE.aktiverMonat = keys[idx+1]; saveState(STATE); refreshAll(); }
+}
+function refreshAll() {
+  renderDashboard();
+  renderZahlungen();
+  updateMonatLabels();
+  loadKontoInputs();
+}
+function updateMonatLabels() {
+  const m = STATE.monate[STATE.aktiverMonat];
+  const lbl = m ? m.label : STATE.aktiverMonat;
+  document.getElementById('dash-monat-label').textContent = lbl;
+  document.getElementById('input-monat-label').textContent = lbl;
+  document.getElementById('zahlung-monat-label').textContent = lbl;
+}
+
+// ══ KONTOSTAENDE ═══════════════════════════════════════════════════════════
+function loadKontoInputs() {
+  const m = STATE.monate[STATE.aktiverMonat];
+  if (!m) return;
+  const k = m.kontostaende;
+  ['giro','auto','vers','not','urlaub'].forEach(key => {
+    const el = document.getElementById('in-'+key);
+    if (el) el.value = k[key] !== null ? k[key] : '';
+  });
+}
+function saveKontostaende() {
+  const m = STATE.monate[STATE.aktiverMonat];
+  if (!m) return;
+  ['giro','auto','vers','not','urlaub'].forEach(key => {
+    const v = parseFloat(document.getElementById('in-'+key).value);
+    m.kontostaende[key] = isNaN(v) ? null : v;
+  });
+  m.lastUpdate = new Date().toISOString();
+  saveState(STATE);
+  renderDashboard();
+  switchTab('dash', document.querySelector('.tab-btn'));
+}
+
+// ══ DASHBOARD ════════════════════════════════════════════════════════════
+function getZone(key,val) {
+  if (val < LIMITS[key].krit) return 'krit';
+  if (val > LIMITS[key].oben) return 'deck';
+  return 'ok';
+}
+function zoneColor(z) {
+  return z==='krit'?'var(--danger)':z==='deck'?'var(--warn)':'var(--ok)';
+}
+function renderDashboard() {
+  const m = STATE.monate[STATE.aktiverMonat];
+  if (!m) return;
+  const k = m.kontostaende;
+
+  updateMonatLabels();
+
+  // last update
+  if (m.lastUpdate) {
+    const d = new Date(m.lastUpdate);
+    document.getElementById('dash-last-update').textContent =
+      d.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'}) + ' ' +
+      d.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+  }
+
+  const keys = ['giro','auto','vers','not','urlaub'];
+  const zones = {};
+
+  keys.forEach(key => {
+    const v = k[key];
+    const card = document.getElementById('tc-'+key);
+    if (v === null) {
+      card.style.setProperty('--tc','var(--border)');
+      document.getElementById('tv-'+key).textContent = '– €';
+      document.getElementById('tb-'+key).textContent = '–';
+      document.getElementById('td-'+key).textContent = 'Noch kein Stand';
+      document.getElementById('bar-'+key).style.width = '0%';
+      return;
+    }
+    const zone = getZone(key,v);
+    zones[key] = zone;
+    const color = zoneColor(zone);
+    const pct = zone==='krit' ? Math.max(2,(v/LIMITS[key].krit)*40) : zone==='deck' ? 100 : 40+((v-LIMITS[key].krit)/(LIMITS[key].oben-LIMITS[key].krit))*60;
+
+    card.style.setProperty('--tc', color);
+    document.getElementById('tv-'+key).textContent = fmt(v);
+    document.getElementById('tb-'+key).textContent = zone==='krit'?'⚠ KRITISCH':zone==='deck'?'▲ DECKEL':'✓ OK';
+    document.getElementById('td-'+key).textContent = TEXTS[key][zone];
+    document.getElementById('bar-'+key).style.width = Math.min(100,pct)+'%';
+  });
+
+  // Progress
+  [['giro',1000],['auto',2700],['not',1500],['urlaub',3000]].forEach(([key,t]) => {
+    if (k[key]===null) return;
+    const pct = Math.min(100,Math.round((k[key]/t)*100));
+    document.getElementById('prog-'+key).style.width = pct+'%';
+    document.getElementById('pct-'+key).textContent = pct+'%';
+  });
+
+  // Banner
+  const zoneList = Object.values(zones);
+  const critCount = zoneList.filter(z=>z==='krit').length;
+  const deckCount = zoneList.filter(z=>z==='deck').length;
+  let sysText, sysBorder, sysBg;
+  if (!zoneList.length)      { sysText='Kontostände eingeben →'; sysBorder='var(--border)'; sysBg='var(--surface)'; }
+  else if (critCount>=3)     { sysText='🔴 System unter Druck – sofort prüfen'; sysBorder='var(--danger)'; sysBg='#1a0808'; }
+  else if (critCount>=1)     { sysText='🟡 Teilweise kritisch – Töpfe prüfen'; sysBorder='var(--warn)'; sysBg='#1a1408'; }
+  else if (deckCount>=2)     { sysText='🟢 Töpfe voll – Überschuss umleiten'; sysBorder='var(--accent)'; sysBg='#141a08'; }
+  else                       { sysText='🟢 System stabil – Kreislauf läuft'; sysBorder='var(--ok)'; sysBg='#081a10'; }
+
+  const banner = document.getElementById('sys-banner');
+  banner.style.borderColor = sysBorder;
+  banner.style.background = sysBg;
+  document.getElementById('sys-dot').style.background = sysBorder;
+  document.getElementById('sys-text').textContent = sysText;
+
+  // Fazit
+  const anyCrit = critCount>0;
+  const allOk = zoneList.length===5 && zoneList.every(z=>z==='ok');
+  document.getElementById('fazit-text').textContent = !zoneList.length
+    ? 'Kontostände eingeben um zu starten'
+    : anyCrit ? 'Handlungsbedarf – Töpfe kontrollieren.'
+    : allOk ? 'System trägt sich selbst. ✓'
+    : 'System läuft – weiter beobachten.';
+}
+
+// ══ ZAHLUNGEN ════════════════════════════════════════════════════════════
+function pillClass(topf) {
+  return {Giro:'pill-giro',Auto:'pill-auto',Versicherung:'pill-vers',Altlast:'pill-alt',Urlaub:'pill-urlaub',Leben:'pill-leben'}[topf]||'pill-leben';
+}
+function renderZahlungen() {
+  const m = STATE.monate[STATE.aktiverMonat];
+  const container = document.getElementById('zahlung-content');
+  if (!m) { container.innerHTML = '<div style="padding:14px;color:var(--muted);font-size:12px">Kein Monat geladen</div>'; return; }
+
+  const gruppen = {
+    'Fixkosten': m.zahlungen.filter(z=>z.topf==='Giro'),
+    'Versicherungstopf': m.zahlungen.filter(z=>z.topf==='Versicherung'),
+    'Autotopf': m.zahlungen.filter(z=>z.topf==='Auto'),
+    'Urlaubstopf': m.zahlungen.filter(z=>z.topf==='Urlaub'),
+    'Leben': m.zahlungen.filter(z=>z.topf==='Leben'),
+    'Altlasten': m.zahlungen.filter(z=>z.topf==='Altlast'),
+  };
+
+  let html = '';
+  for (const [grp, items] of Object.entries(gruppen)) {
+    const total = items.reduce((s,z)=>s+z.betrag,0);
+    const topfKey = {Fixkosten:'Giro',Versicherungstopf:'Versicherung',Autotopf:'Auto',Urlaubstopf:'Urlaub',Leben:'Leben',Altlasten:'Altlast'}[grp];
+    html += `<div class="table-card" style="margin-bottom:10px">`;
+    html += `<div class="group-header"><span>${grp.toUpperCase()} · ${fmt(total)}</span><button class="add-btn" onclick="showZahlungModal(null,'${topfKey}')">+ Add</button></div>`;
+    if (!items.length) {
+      html += `<div style="padding:12px 14px;font-size:11px;color:var(--muted)">Keine Einträge</div>`;
+    }
+    items.forEach(z => {
+      html += `<div class="zahl-row">
+        <button class="zahl-check ${z.paid?'done':''}" onclick="togglePaid('${z.id}')">✓</button>
+        <span class="zahl-date">${z.datum}</span>
+        <span class="zahl-name ${z.paid?'done-text':''}">${z.name}</span>
+        <span class="topf-pill ${pillClass(z.topf)}">${z.topf}</span>
+        <span class="zahl-amount">−${fmt(z.betrag)}</span>
+        <button class="zahl-del" onclick="deleteZahlung('${z.id}')">×</button>
+      </div>`;
+    });
+    html += `</div>`;
+  }
+  container.innerHTML = html;
+}
+
+function togglePaid(id) {
+  const m = STATE.monate[STATE.aktiverMonat];
+  const z = m.zahlungen.find(x=>x.id===id);
+  if (z) { z.paid = !z.paid; saveState(STATE); renderZahlungen(); }
+}
+function deleteZahlung(id) {
+  const m = STATE.monate[STATE.aktiverMonat];
+  m.zahlungen = m.zahlungen.filter(x=>x.id!==id);
+  saveState(STATE); renderZahlungen();
+}
+
+function showZahlungModal(id, defaultTopf) {
+  STATE.editZahlungId = id;
+  STATE.editZahlungMonat = STATE.aktiverMonat;
+  document.getElementById('modal-zahlung-title').textContent = id ? 'Zahlung bearbeiten' : 'Zahlung hinzufügen';
+  if (id) {
+    const z = STATE.monate[STATE.aktiverMonat].zahlungen.find(x=>x.id===id);
+    document.getElementById('mz-datum').value = z.datum;
+    document.getElementById('mz-name').value = z.name;
+    document.getElementById('mz-betrag').value = z.betrag;
+    document.getElementById('mz-topf').value = z.topf;
+  } else {
+    document.getElementById('mz-datum').value = '';
+    document.getElementById('mz-name').value = '';
+    document.getElementById('mz-betrag').value = '';
+    document.getElementById('mz-topf').value = defaultTopf || 'Giro';
+  }
+  document.getElementById('modal-zahlung').classList.remove('hidden');
+}
+function saveZahlung() {
+  const m = STATE.monate[STATE.editZahlungMonat || STATE.aktiverMonat];
+  const datum = document.getElementById('mz-datum').value.trim();
+  const name = document.getElementById('mz-name').value.trim();
+  const betrag = parseFloat(document.getElementById('mz-betrag').value);
+  const topf = document.getElementById('mz-topf').value;
+  if (!name || isNaN(betrag)) return;
+
+  if (STATE.editZahlungId) {
+    const z = m.zahlungen.find(x=>x.id===STATE.editZahlungId);
+    if (z) { z.datum=datum; z.name=name; z.betrag=betrag; z.topf=topf; }
+  } else {
+    m.zahlungen.push({id:'z'+Date.now(),datum,name,betrag,topf,paid:false});
+  }
+  saveState(STATE);
+  closeModal('modal-zahlung');
+  renderZahlungen();
+}
+
+// ══ PEAKS ════════════════════════════════════════════════════════════════
+function renderPeaks() {
+  const list = document.getElementById('peak-list');
+  if (!STATE.peaks.length) {
+    list.innerHTML = '<div style="padding:14px;font-size:12px;color:var(--muted)">Keine Peaks eingetragen</div>';
+    return;
+  }
+  list.innerHTML = STATE.peaks.map(p => `
+    <div class="peak-item">
+      <div>
+        <div class="peak-month">${p.monat}</div>
+        <div class="peak-note">${p.notiz||''}</div>
+      </div>
+      <div class="peak-actions">
+        <div class="peak-amount">${fmtShort(p.betrag)}</div>
+        <div style="display:flex;gap:5px;align-items:center">
+          <span class="peak-area">${p.bereich}</span>
+          <button style="background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer;padding:0" onclick="showPeakModal('${p.id}')">✎</button>
+          <button style="background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;padding:0" onclick="deletePeak('${p.id}')">×</button>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function showPeakModal(id) {
+  document.getElementById('mp-edit-id').value = id || '';
+  document.getElementById('modal-peak-title').textContent = id ? 'Peak bearbeiten' : 'Peak hinzufügen';
+  if (id) {
+    const p = STATE.peaks.find(x=>x.id===id);
+    document.getElementById('mp-monat').value = p.monat;
+    document.getElementById('mp-betrag').value = p.betrag;
+    document.getElementById('mp-bereich').value = p.bereich;
+    document.getElementById('mp-notiz').value = p.notiz||'';
+  } else {
+    document.getElementById('mp-monat').value = '';
+    document.getElementById('mp-betrag').value = '';
+    document.getElementById('mp-bereich').value = '';
+    document.getElementById('mp-notiz').value = '';
+  }
+  document.getElementById('modal-peak').classList.remove('hidden');
+}
+function savePeak() {
+  const id = document.getElementById('mp-edit-id').value;
+  const monat = document.getElementById('mp-monat').value.trim();
+  const betrag = parseFloat(document.getElementById('mp-betrag').value);
+  const bereich = document.getElementById('mp-bereich').value.trim();
+  const notiz = document.getElementById('mp-notiz').value.trim();
+  if (!monat || isNaN(betrag)) return;
+
+  if (id) {
+    const p = STATE.peaks.find(x=>x.id===id);
+    if (p) { p.monat=monat; p.betrag=betrag; p.bereich=bereich; p.notiz=notiz; }
+  } else {
+    STATE.peaks.push({id:'p'+Date.now(),monat,betrag,bereich,notiz});
+  }
+  saveState(STATE);
+  closeModal('modal-peak');
+  renderPeaks();
+}
+function deletePeak(id) {
+  STATE.peaks = STATE.peaks.filter(x=>x.id!==id);
+  saveState(STATE); renderPeaks();
+}
+
+// ══ NEUER MONAT ═══════════════════════════════════════════════════════════
+function showNeuerMonatModal() {
+  const now = new Date();
+  document.getElementById('nm-monat').value = now.getMonth()+2 > 12 ? 1 : now.getMonth()+2;
+  document.getElementById('nm-jahr').value = now.getFullYear();
+  document.getElementById('modal-neuer-monat').classList.remove('hidden');
+}
+function createNeuerMonat() {
+  const monat = parseInt(document.getElementById('nm-monat').value);
+  const jahr = parseInt(document.getElementById('nm-jahr').value);
+  const key = `${jahr}-${String(monat).padStart(2,'0')}`;
+  if (STATE.monate[key]) { closeModal('modal-neuer-monat'); STATE.aktiverMonat=key; refreshAll(); return; }
+
+  // Neue Zahlungen aus Vorlage ohne einmalige Sachen
+  const zahlungen = JSON.parse(JSON.stringify(STANDARD_ZAHLUNGEN)).map((z,i) => ({
+    ...z, id:'z'+Date.now()+i, paid:false
+  }));
+
+  STATE.monate[key] = {
+    label: `${MONAT_NAMEN[monat]} ${jahr}`,
+    kontostaende: {giro:null,auto:null,vers:null,not:null,urlaub:null},
+    lastUpdate: null,
+    zahlungen
+  };
+  STATE.aktiverMonat = key;
+  saveState(STATE);
+  closeModal('modal-neuer-monat');
+  refreshAll();
+  renderZahlungen();
+}
+
+// ══ ARCHIV ════════════════════════════════════════════════════════════════
+function renderArchiv() {
+  const keys = monatKeys().reverse();
+  const el = document.getElementById('archiv-list');
+  if (keys.length <= 1) {
+    el.innerHTML = '<div style="padding:14px;font-size:12px;color:var(--muted)">Noch keine archivierten Monate</div>';
+    return;
+  }
+  el.innerHTML = keys.map(k => {
+    const m = STATE.monate[k];
+    const paid = m.zahlungen.filter(z=>z.paid).length;
+    const total = m.zahlungen.length;
+    const isActive = k === STATE.aktiverMonat;
+    return `<div class="archive-item">
+      <div>
+        <div class="archive-month">${m.label} ${isActive?'<span style="font-size:9px;color:var(--accent)">(aktiv)</span>':''}</div>
+        <div class="archive-sub">${paid}/${total} Zahlungen erledigt</div>
+      </div>
+      <button class="archive-load" onclick="loadMonat('${k}')">Laden</button>
+    </div>`;
+  }).join('');
+}
+function loadMonat(key) {
+  STATE.aktiverMonat = key;
+  saveState(STATE);
+  refreshAll();
+  switchTab('dash', document.querySelector('.tab-btn'));
+}
+
+// ══ EXPORT / IMPORT ═══════════════════════════════════════════════════════
+function exportData() {
+  const data = JSON.stringify(STATE, null, 2);
+  const blob = new Blob([data], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `finanz-backup-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+function importData(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      STATE = data;
+      saveState(STATE);
+      refreshAll();
+      alert('Import erfolgreich!');
+    } catch(err) { alert('Fehler beim Import'); }
+  };
+  reader.readAsText(file);
+}
+
+// ══ MODAL ════════════════════════════════════════════════════════════════
+function closeModal(id) {
+  document.getElementById(id).classList.add('hidden');
+}
+document.querySelectorAll('.modal-overlay').forEach(el => {
+  el.addEventListener('click', e => { if (e.target === el) el.classList.add('hidden'); });
+});
+
+// ══ UTILS ════════════════════════════════════════════════════════════════
+function fmt(v) {
+  return v.toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2})+' €';
+}
+function fmtShort(v) {
+  return v.toLocaleString('de-DE',{minimumFractionDigits:0,maximumFractionDigits:0})+' €';
+}
+
+// ══ INIT ══════════════════════════════════════════════════════════════════
+updateMonatLabels();
+loadKontoInputs();
+renderDashboard();
+</script>
+</body>
+</html>

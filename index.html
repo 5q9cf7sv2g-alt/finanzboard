@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Finanz Board V3</title>
+
+<style>
+body {
+  margin:0;
+  font-family:-apple-system, BlinkMacSystemFont, sans-serif;
+  background:#0e0f11;
+  color:#e8e9ea;
+}
+
+.container {
+  padding:20px;
+}
+
+.card {
+  background:#161719;
+  border:1px solid #252729;
+  border-radius:14px;
+  padding:16px;
+  margin-bottom:12px;
+}
+
+.label {
+  font-size:11px;
+  color:#9aa0a6;
+  margin-bottom:6px;
+}
+
+.value {
+  font-size:30px;
+  font-weight:700;
+}
+
+.desc {
+  font-size:12px;
+  color:#b3b8be;
+}
+
+.bar {
+  height:4px;
+  background:#252729;
+  border-radius:99px;
+  margin-top:10px;
+  overflow:hidden;
+}
+
+.fill {
+  height:100%;
+  width:0%;
+  background:#c8f542;
+}
+
+.green { color:#42f5a6 }
+.yellow { color:#f5c842 }
+.red { color:#f55142 }
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<!-- FREI -->
+<div class="card">
+  <div class="label">FREI VERFÜGBAR</div>
+  <div id="frei" class="value">0 €</div>
+  <div class="desc">
+    <span id="offen">0 €</span> Fixkosten offen
+  </div>
+  <div class="bar"><div id="barFrei" class="fill"></div></div>
+</div>
+
+<!-- LEBENSBUDGET -->
+<div class="card">
+  <div class="label">TÄGLICH VERFÜGBAR</div>
+  <div id="daily" class="value">0 €</div>
+  <div class="desc">
+    <span id="tage">0</span> Tage verbleibend
+  </div>
+</div>
+
+<!-- GIRO -->
+<div class="card">
+  <div class="label">GIRO</div>
+  <div id="giro" class="value">0 €</div>
+</div>
+
+<!-- AUTO -->
+<div class="card">
+  <div class="label">AUTO</div>
+  <div id="auto" class="value">0 €</div>
+</div>
+
+<!-- VERS -->
+<div class="card">
+  <div class="label">VERSICHERUNG</div>
+  <div id="vers" class="value">0 €</div>
+</div>
+
+<!-- NOT -->
+<div class="card">
+  <div class="label">NOTGROSCHEN</div>
+  <div id="not" class="value">0 €</div>
+</div>
+
+<!-- URLAUB -->
+<div class="card">
+  <div class="label">URLAUB</div>
+  <div id="urlaub" class="value">0 €</div>
+</div>
+
+</div>
+
+<script>
+
+// ===== DATUM =====
+const now = new Date()
+const heute = now.getDate()
+const jahr = now.getFullYear()
+const monat = now.getMonth()
+
+const tageImMonat = new Date(jahr, monat + 1, 0).getDate()
+const resttage = tageImMonat - heute + 1
+
+// ===== KONTO =====
+let giro = 1636.94
+let auto = 223.97
+let vers = 250.40
+let not = 321.19
+let urlaub = 575.29
+
+// ===== ZAHLUNGEN =====
+const zahlungen = [
+  {name:"Apple", betrag:34.95, tag:14, paid:false},
+  {name:"LVB", betrag:15, tag:14, paid:false},
+  {name:"Tado", betrag:3.99, tag:17, paid:false},
+  {name:"Mobilcom", betrag:7.99, tag:17, paid:false},
+  {name:"Kreditkarte", betrag:2.49, tag:20, paid:false},
+  {name:"Auxilia", betrag:23.95, tag:23, paid:false},
+  {name:"ChatGPT", betrag:7.99, tag:23, paid:false}
+]
+
+// ===== OFFENE FIXKOSTEN =====
+let offen = 0
+
+zahlungen.forEach(z => {
+  if (!z.paid && z.tag >= heute) {
+    offen += z.betrag
+  }
+})
+
+// ===== FREI =====
+let frei = giro - offen
+
+// ===== DAILY =====
+let daily = frei / resttage
+
+// ===== UI =====
+function euro(v){
+  return v.toFixed(2) + " €"
+}
+
+document.getElementById("giro").innerText = euro(giro)
+document.getElementById("auto").innerText = euro(auto)
+document.getElementById("vers").innerText = euro(vers)
+document.getElementById("not").innerText = euro(not)
+document.getElementById("urlaub").innerText = euro(urlaub)
+
+document.getElementById("frei").innerText = euro(frei)
+document.getElementById("offen").innerText = euro(offen)
+
+document.getElementById("daily").innerText = euro(daily)
+document.getElementById("tage").innerText = resttage + " Tage"
+
+// ===== FARBEN =====
+function setColor(el, value){
+  if (value < 300) el.className = "value red"
+  else if (value < 800) el.className = "value yellow"
+  else el.className = "value green"
+}
+
+setColor(document.getElementById("frei"), frei)
+
+if (daily < 20) document.getElementById("daily").className = "value red"
+else if (daily < 40) document.getElementById("daily").className = "value yellow"
+else document.getElementById("daily").className = "value green"
+
+// ===== BAR =====
+let pct = Math.max(0, Math.min(100, (frei / 1000) * 100))
+document.getElementById("barFrei").style.width = pct + "%"
+
+</script>
+
+</body>
+</html>

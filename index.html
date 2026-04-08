@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Finanz Bordcomputer</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0b0d;--surface:#13151a;--surface2:#1a1d24;--border:#2e3240;
+  --text:#f2f3f5;--text2:#c8cdd8;--muted:#7a8090;
+  --accent:#c8f542;--ok:#2ecc8a;--warn:#f5b731;--danger:#f04444;--info:#4a9eff;--purple:#a78bfa;
+  --mono:'DM Mono',monospace;--sans:'Syne',sans-serif;
+  --safe-top:env(safe-area-inset-top,0px);--safe-bottom:env(safe-area-inset-bottom,0px);
+}
+html{overflow-x:hidden}
+body{background:var(--bg);color:var(--text);font-family:var(--mono);min-height:100vh;width:100%;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding-bottom:calc(70px + var(--safe-bottom))}
+
+.tab-bar{position:fixed;bottom:0;left:0;right:0;background:rgba(10,11,13,.97);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-top:1px solid var(–border);display:flex;z-index:100;padding-bottom:var(–safe-bottom)}
+.tab-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:9px 2px 7px;gap:3px;background:none;border:none;cursor:pointer;color:var(–muted);font-family:var(–mono);font-size:8px;letter-spacing:.04em;-webkit-tap-highlight-color:transparent;white-space:nowrap;transition:color .15s}
+.tab-btn.active{color:var(–accent)}
+.tab-icon{font-size:17px;line-height:1}
+
+.page{display:none;padding:0 14px 20px;animation:fadeIn .2s ease}
+.page.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+
+.ph{position:sticky;top:0;background:rgba(10,11,13,.97);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);padding:calc(var(–safe-top) + 14px) 14px 12px;margin:0 -14px 14px;z-index:50;border-bottom:1px solid var(–border)}
+.ph-title{font-family:var(–sans);font-size:21px;font-weight:800;letter-spacing:-.03em;color:var(–text)}
+.ph-title span{color:var(–accent)}
+.ph-sub{font-size:11px;color:var(–text2);margin-top:4px;display:flex;justify-content:space-between;align-items:center}
+
+.sl{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(–text2);margin:18px 0 8px;font-weight:500}
+
+.card{background:var(–surface);border:1px solid var(–border);border-radius:14px;padding:14px;margin-bottom:10px}
+
+/* FREIES GIRO */
+.frei{background:var(–surface);border:1px solid var(–border);border-radius:14px;padding:16px;margin-bottom:12px;position:relative;overflow:hidden}
+.frei::before{content:’’;position:absolute;top:0;left:0;right:0;height:3px;background:var(–fc,var(–border))}
+.frei-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:2px}
+.frei-lbl{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(–text2)}
+.frei-period{font-size:10px;color:var(–text2)}
+.frei-amt{font-family:var(–sans);font-size:36px;font-weight:800;letter-spacing:-.04em;line-height:1;margin-bottom:8px}
+.frei-detail{font-size:11px;color:var(–text2);line-height:1.9}
+.frei-detail b{color:var(–text)}
+.frei-cols{display:flex;gap:0;border-top:1px solid var(–border);margin-top:12px;padding-top:12px}
+.frei-col{flex:1;text-align:center;padding:0 4px}
+.frei-col+.frei-col{border-left:1px solid var(–border)}
+.frei-col-l{font-size:9px;color:var(–text2);letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px}
+.frei-col-v{font-size:14px;font-weight:500;color:var(–text)}
+
+/* BANNER */
+.banner{border-radius:14px;padding:13px 15px;margin-bottom:12px;border:1px solid var(–border);background:var(–surface);display:flex;align-items:center;gap:12px}
+.bdot{width:9px;height:9px;border-radius:50%;background:var(–muted);flex-shrink:0}
+.blbl{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(–text2)}
+.btxt{font-size:14px;color:var(–text);margin-top:3px;font-family:var(–sans);font-weight:700}
+
+/* TOPF CARD */
+.tc{background:var(–surface);border:1px solid var(–border);border-radius:14px;padding:14px;margin-bottom:10px;position:relative;overflow:hidden}
+.tc::before{content:’’;position:absolute;top:0;left:0;right:0;height:2px;background:var(–c,var(–border))}
+.tc-top{display:flex;justify-content:space-between;align-items:center}
+.tc-name{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#c8cdd8}
+.tc-badge{font-size:9px;padding:2px 8px;border-radius:99px;border:1px solid var(–c,var(–border));color:var(–c,var(–text2))}
+.tc-amt{font-family:var(–sans);font-size:26px;font-weight:800;letter-spacing:-.04em;color:var(–c,var(–text));margin:5px 0 3px;line-height:1}
+.tc-desc{font-size:12px;color:#c8cdd8;line-height:1.5}
+.bar-wrap{margin-top:9px}
+.bar-t{height:3px;background:var(–border);border-radius:99px;overflow:hidden}
+.bar-f{height:100%;border-radius:99px;background:var(–c,var(–accent));transition:width .7s cubic-bezier(.22,1,.36,1)}
+.bar-lbls{display:flex;justify-content:space-between;font-size:9px;color:#c8cdd8;margin-top:3px}
+
+/* PROGRESS */
+.pr{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.pr:last-child{margin-bottom:0}
+.pr-n{font-size:12px;color:#c8cdd8;width:88px;flex-shrink:0}
+.pr-t{flex:1;height:4px;background:var(–border);border-radius:99px;overflow:hidden}
+.pr-f{height:100%;border-radius:99px;transition:width .7s cubic-bezier(.22,1,.36,1)}
+.pr-p{font-size:11px;width:32px;text-align:right;color:var(–text)}
+
+/* INPUT */
+.ic{background:var(–surface);border:1px solid var(–border);border-radius:14px;overflow:hidden;margin-bottom:10px}
+.ir{display:flex;align-items:center;padding:6px 14px;border-bottom:1px solid var(–border);min-height:62px}
+.ir:last-child{border-bottom:none}
+.il{font-size:14px;color:#f2f3f5;flex:1}
+.il small{display:block;font-size:11px;color:#c8cdd8;margin-top:3px}
+.if{background:#1e2128;border:1px solid #3a3f50;border-radius:8px;outline:none;color:#c8f542;font-family:var(–mono);font-size:18px;font-weight:500;text-align:right;width:120px;-webkit-appearance:none;padding:10px 12px;margin:8px 0}
+.if::placeholder{color:#5a6070}
+.is{color:var(–text2);font-size:13px;margin-left:4px}
+
+/* BUTTONS */
+.btn{width:100%;border:none;border-radius:12px;padding:15px;font-family:var(–mono);font-size:13px;font-weight:500;letter-spacing:.06em;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:opacity .15s;margin-bottom:10px}
+.btn:active{opacity:.75}
+.ba{background:var(–accent);color:#0a0b0d}
+.bs{background:var(–surface);color:var(–text);border:1px solid var(–border)}
+.bsm{padding:9px 14px;font-size:11px;border-radius:9px;width:auto;margin-bottom:0}
+
+/* TABLE */
+.tbl{background:var(–surface);border:1px solid var(–border);border-radius:14px;overflow:hidden;margin-bottom:10px}
+.gh{background:var(–surface2);padding:9px 14px;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#c8cdd8;display:flex;justify-content:space-between;align-items:center}
+.gh .ab{background:none;border:1px solid var(–border);border-radius:6px;color:var(–accent);font-size:11px;padding:3px 9px;cursor:pointer;font-family:var(–mono);-webkit-tap-highlight-color:transparent}
+
+.zr{display:flex;align-items:center;padding:12px 14px;border-top:1px solid var(–border);gap:7px;-webkit-tap-highlight-color:transparent}
+.zr:active{background:var(–surface2)}
+.zck{width:22px;height:22px;border-radius:7px;border:1px solid var(–border);background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;-webkit-tap-highlight-color:transparent;color:transparent;transition:all .15s}
+.zck.done{background:var(–ok);border-color:var(–ok);color:#0a0b0d}
+.zdate{font-size:11px;color:#c8cdd8;width:38px;flex-shrink:0}
+.zname{font-size:14px;color:#f2f3f5;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.zname.dt{color:var(–muted);text-decoration:line-through}
+.zamt{font-size:13px;font-weight:600;color:#f04444;flex-shrink:0}
+.zrec{font-size:11px;color:var(–text2);flex-shrink:0}
+.zdel{background:none;border:none;color:var(–muted);font-size:18px;cursor:pointer;padding:0 0 0 2px;-webkit-tap-highlight-color:transparent;flex-shrink:0}
+
+.pill{font-size:9px;padding:2px 6px;border-radius:4px;flex-shrink:0;white-space:nowrap}
+.pg{background:#0d2018;color:var(–ok)}
+.pa{background:#201a08;color:var(–warn)}
+.pv{background:#081428;color:var(–info)}
+.pl{background:#200a0a;color:var(–danger)}
+.pu{background:#13102a;color:var(–purple)}
+.plb{background:#1a1c22;color:var(–text2)}
+
+/* PEAK */
+.pi{display:flex;align-items:center;justify-content:space-between;padding:13px 14px;border-top:1px solid var(–border)}
+.pi:first-child{border-top:none}
+.pi-m{font-size:14px;color:#f2f3f5}
+.pi-n{font-size:11px;color:#c8cdd8;margin-top:2px}
+.pi-a{font-family:var(–sans);font-size:18px;font-weight:800;color:var(–warn)}
+.pi-b{font-size:9px;padding:2px 7px;border-radius:4px;background:#201a08;color:var(–warn);display:inline-block;margin-top:3px}
+.pi-r{display:flex;flex-direction:column;align-items:flex-end;gap:5px}
+
+/* REGELN */
+.rr{display:flex;align-items:flex-start;gap:10px;padding:13px 14px;border-top:1px solid var(–border)}
+.rr:first-child{border-top:none}
+.rd{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:4px}
+.rt{font-size:14px;color:#f2f3f5}
+.rs{font-size:11px;color:#c8cdd8;margin-top:2px}
+.gr{display:flex;align-items:center;padding:11px 14px;border-top:1px solid var(–border);gap:8px}
+.gr:first-child{border-top:none}
+.gn{font-size:13px;color:#f2f3f5;flex:1}
+.gk{font-size:11px;color:var(–danger)}
+.go{font-size:11px;color:var(–ok)}
+.gd{font-size:11px;color:var(–warn)}
+
+/* GRUNDSATZ */
+.gz{background:var(–surface);border:1px solid var(–border);border-radius:14px;padding:20px 14px;text-align:center;margin-top:8px}
+.gz-m{font-family:var(–sans);font-size:16px;font-weight:800;color:var(–accent)}
+.gz-s{font-size:11px;color:var(–text2);margin-top:6px;line-height:1.8}
+
+/* MODAL */
+.mo{position:fixed;inset:0;background:rgba(0,0,0,.78);z-index:200;display:flex;align-items:flex-end;justify-content:center}
+.mo.hidden{display:none}
+.mb{background:var(–surface);border-radius:20px 20px 0 0;padding:20px 16px calc(22px + var(–safe-bottom));width:100%;max-height:92vh;overflow-y:auto}
+.mt{font-family:var(–sans);font-size:17px;font-weight:800;margin-bottom:16px;color:#c8f542}
+.mf{margin-bottom:13px}
+.mf label{display:block;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#c8cdd8;margin-bottom:6px}
+.mf input,.mf select{width:100%;background:#1e2230;border:1px solid #3a4055;border-radius:10px;color:#f2f3f5;font-family:var(–mono);font-size:15px;padding:13px;outline:none;-webkit-appearance:none}
+.mf input:focus,.mf select:focus{border-color:#c8f542;background:#252838}
+.mf select option{background:#1e2230;color:#f2f3f5}
+.tog-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(–border);margin-bottom:4px}
+.tog-l{font-size:13px;color:#f2f3f5}
+.tog-s{font-size:11px;color:#c8cdd8;margin-top:2px}
+.tog{width:46px;height:27px;border-radius:14px;background:var(–border);position:relative;cursor:pointer;-webkit-tap-highlight-color:transparent;border:none;flex-shrink:0;transition:background .2s}
+.tog.on{background:var(–accent)}
+.tog::after{content:’’;position:absolute;width:21px;height:21px;border-radius:50%;background:#fff;top:3px;left:3px;transition:transform .2s}
+.tog.on::after{transform:translateX(19px)}
+.mbtns{display:flex;gap:8px;margin-top:16px}
+.mbtns .btn{margin-bottom:0}
+
+/* MONAT NAV */
+.mn{display:flex;align-items:center;gap:8px}
+.mnb{background:none;border:1px solid var(–border);border-radius:8px;color:var(–text);font-size:16px;width:32px;height:32px;cursor:pointer;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent;flex-shrink:0}
+.mnl{font-size:13px;color:var(–accent);font-weight:500;flex:1;text-align:center}
+
+/* ARCHIV */
+.ai{display:flex;justify-content:space-between;align-items:center;padding:13px 14px;border-top:1px solid var(–border)}
+.ai:first-child{border-top:none}
+.aim{font-size:14px;color:#f2f3f5}
+.ais{font-size:11px;color:#c8cdd8;margin-top:2px}
+.ail{background:none;border:1px solid var(–border);border-radius:6px;color:var(–accent);font-size:11px;padding:4px 10px;cursor:pointer;font-family:var(–mono)}
+</style>
+
+</head>
+<body>
+
+<!-- DASHBOARD -->
+
+<div class="page active" id="page-dash">
+  <div class="ph">
+    <div class="ph-title">FINANZ<span>BOARD</span></div>
+    <div class="ph-sub"><span id="lbl-dash">–</span><span id="lbl-update" style="font-size:10px"></span></div>
+  </div>
+
+  <div class="banner" id="sys-banner">
+    <div class="bdot" id="sys-dot"></div>
+    <div><div class="blbl">Systemstatus</div><div class="btxt" id="sys-txt">Kontostände eingeben →</div></div>
+  </div>
+
+  <div class="frei" id="frei-card">
+    <div class="frei-top"><div class="frei-lbl">Frei verfügbar</div><div class="frei-period" id="frei-period">bis nächstes Gehalt</div></div>
+    <div class="frei-amt" id="frei-amt">– €</div>
+    <div class="frei-detail" id="frei-detail">Kontostände eingeben um zu berechnen</div>
+    <div class="frei-cols">
+      <div class="frei-col"><div class="frei-col-l">Giro Stand</div><div class="frei-col-v" id="fc-giro">–</div></div>
+      <div class="frei-col"><div class="frei-col-l">Offen Fix</div><div class="frei-col-v" id="fc-fix" style="color:var(--danger)">–</div></div>
+      <div class="frei-col"><div class="frei-col-l">Offen Töpfe</div><div class="frei-col-v" id="fc-topf" style="color:var(--warn)">–</div></div>
+    </div>
+  </div>
+
+  <div class="tc" id="tc-giro"><div class="tc-top"><div class="tc-name">Giro</div><div class="tc-badge" id="tb-giro">–</div></div><div class="tc-amt" id="tv-giro">– €</div><div class="tc-desc" id="td-giro">Noch kein Stand</div><div class="bar-wrap"><div class="bar-t"><div class="bar-f" id="bar-giro" style="width:0%"></div></div><div class="bar-lbls"><span>0</span><span>300</span><span>1.000</span></div></div></div>
+  <div class="tc" id="tc-auto"><div class="tc-top"><div class="tc-name">Auto Topf ★</div><div class="tc-badge" id="tb-auto">–</div></div><div class="tc-amt" id="tv-auto">– €</div><div class="tc-desc" id="td-auto">Noch kein Stand</div><div class="bar-wrap"><div class="bar-t"><div class="bar-f" id="bar-auto" style="width:0%"></div></div><div class="bar-lbls"><span>0</span><span>1.200</span><span>2.700</span></div></div></div>
+  <div class="tc" id="tc-vers"><div class="tc-top"><div class="tc-name">Versicherung</div><div class="tc-badge" id="tb-vers">–</div></div><div class="tc-amt" id="tv-vers">– €</div><div class="tc-desc" id="td-vers">Noch kein Stand</div><div class="bar-wrap"><div class="bar-t"><div class="bar-f" id="bar-vers" style="width:0%"></div></div><div class="bar-lbls"><span>0</span><span>85</span><span>300</span></div></div></div>
+  <div class="tc" id="tc-not"><div class="tc-top"><div class="tc-name">Notgroschen</div><div class="tc-badge" id="tb-not">–</div></div><div class="tc-amt" id="tv-not">– €</div><div class="tc-desc" id="td-not">Noch kein Stand</div><div class="bar-wrap"><div class="bar-t"><div class="bar-f" id="bar-not" style="width:0%"></div></div><div class="bar-lbls"><span>0</span><span>500</span><span>1.500</span></div></div></div>
+  <div class="tc" id="tc-urlaub"><div class="tc-top"><div class="tc-name">Urlaub</div><div class="tc-badge" id="tb-urlaub">–</div></div><div class="tc-amt" id="tv-urlaub">– €</div><div class="tc-desc" id="td-urlaub">Noch kein Stand</div><div class="bar-wrap"><div class="bar-t"><div class="bar-f" id="bar-urlaub" style="width:0%"></div></div><div class="bar-lbls"><span>0</span><span>1.000</span><span>3.000</span></div></div></div>
+
+  <div class="sl">Zielerfüllung</div>
+  <div class="card">
+    <div class="pr"><div class="pr-n">Giro Sockel</div><div class="pr-t"><div class="pr-f" id="pg-giro" style="width:0%;background:var(--ok)"></div></div><div class="pr-p" id="pp-giro">–</div></div>
+    <div class="pr"><div class="pr-n">Auto Topf</div><div class="pr-t"><div class="pr-f" id="pg-auto" style="width:0%;background:var(--warn)"></div></div><div class="pr-p" id="pp-auto">–</div></div>
+    <div class="pr"><div class="pr-n">Notgroschen</div><div class="pr-t"><div class="pr-f" id="pg-not" style="width:0%;background:var(--danger)"></div></div><div class="pr-p" id="pp-not">–</div></div>
+    <div class="pr"><div class="pr-n">Urlaub</div><div class="pr-t"><div class="pr-f" id="pg-urlaub" style="width:0%;background:var(--purple)"></div></div><div class="pr-p" id="pp-urlaub">–</div></div>
+  </div>
+
+  <div class="gz"><div class="gz-m" id="fazit">Kontostände eingeben um zu starten</div><div class="gz-s">Keine Altlasten · Töpfe zahlen alles<br>Giro stabil · Keine Überraschungen</div></div>
+</div>
+
+<!-- EINGABE -->
+
+<div class="page" id="page-input">
+  <div class="ph">
+    <div class="ph-title">EINGABE</div>
+    <div class="ph-sub"><div class="mn"><button class="mnb" onclick="prevM()">‹</button><span class="mnl" id="lbl-input">–</span><button class="mnb" onclick="nextM()">›</button></div></div>
+  </div>
+
+  <div class="sl">Wöchentliche Kontostände</div>
+  <div class="ic">
+    <div class="ir"><div class="il">Giro Stand<small>Ziel: 300 – 1.000 €</small></div><input class="if" id="in-giro" type="number" inputmode="decimal" placeholder="0.00" step="0.01"><span class="is">€</span></div>
+    <div class="ir"><div class="il">Auto Topf ★<small>Ziel: 1.200 – 2.700 €</small></div><input class="if" id="in-auto" type="number" inputmode="decimal" placeholder="0.00" step="0.01"><span class="is">€</span></div>
+    <div class="ir"><div class="il">Versicherung<small>Ziel: 85 – 300 €</small></div><input class="if" id="in-vers" type="number" inputmode="decimal" placeholder="0.00" step="0.01"><span class="is">€</span></div>
+    <div class="ir"><div class="il">Notgroschen<small>Ziel: 500 – 1.500 €</small></div><input class="if" id="in-not" type="number" inputmode="decimal" placeholder="0.00" step="0.01"><span class="is">€</span></div>
+    <div class="ir"><div class="il">Urlaub<small>Ziel: 1.000 – 3.000 €</small></div><input class="if" id="in-urlaub" type="number" inputmode="decimal" placeholder="0.00" step="0.01"><span class="is">€</span></div>
+  </div>
+  <button class="btn ba" onclick="saveKonto()">Speichern & Dashboard →</button>
+
+  <div class="sl">Nächstes Gehalt</div>
+  <div class="ic">
+    <div class="ir"><div class="il">Gehalt kommt am Tag<small>z.B. 27 – variiert je Monat</small></div><input class="if" id="in-gehalt" type="number" inputmode="numeric" placeholder="27" min="1" max="31" style="width:70px"><span class="is"></span></div>
+  </div>
+  <button class="btn bs" onclick="saveGehalt()">Gehaltsdatum speichern</button>
+
+  <div class="sl">Neuen Monat starten</div>
+  <div class="card" style="padding:14px">
+    <div style="font-size:12px;color:var(--text2);margin-bottom:12px;line-height:1.7">Alle <b style="color:var(--accent)">wiederkehrenden</b> Zahlungen werden automatisch in den neuen Monat übertragen. Einmalige bleiben im aktuellen Monat.</div>
+    <button class="btn bs" style="margin-bottom:0" onclick="showNewMonth()">+ Neuen Monat starten</button>
+  </div>
+
+  <div class="sl">Datensicherung</div>
+  <div class="card" style="padding:14px">
+    <div style="font-size:12px;color:var(--text2);margin-bottom:12px">Daten als Backup exportieren oder wiederherstellen. Alle Daten bleiben nur auf deinem Gerät.</div>
+    <div style="display:flex;gap:8px">
+      <button class="btn bs bsm" onclick="exportData()">📤 Export</button>
+      <button class="btn bs bsm" onclick="document.getElementById('imp').click()">📥 Import</button>
+    </div>
+    <input type="file" id="imp" accept=".json" style="display:none" onchange="importData(event)">
+  </div>
+</div>
+
+<!-- ZAHLUNGEN -->
+
+<div class="page" id="page-zahlung">
+  <div class="ph">
+    <div class="ph-title">ZAHLUNGEN</div>
+    <div class="ph-sub"><span id="lbl-zahlung">–</span></div>
+  </div>
+  <div id="zahlung-content"></div>
+</div>
+
+<!-- PEAKS -->
+
+<div class="page" id="page-peak">
+  <div class="ph"><div class="ph-title">PEAK <span>RADAR</span></div><div class="ph-sub"><span>Kommende Belastungen</span></div></div>
+  <div class="sl">Bevorstehende Peaks</div>
+  <div class="tbl" id="peak-list"></div>
+  <button class="btn bs" onclick="showPeakModal(null)">+ Peak hinzufügen</button>
+  <div class="sl">Peak-Strategie Beispiel (1.500 €)</div>
+  <div class="tbl">
+    <div class="zr" style="border-top:none;cursor:default"><span class="zname">Giro abdecken</span><span class="zamt" style="color:var(--accent)">800 €</span></div>
+    <div class="zr" style="cursor:default"><span class="zname">Notgroschen</span><span class="zamt" style="color:var(--accent)">200 €</span></div>
+    <div class="zr" style="cursor:default"><span class="zname">Amazon Puffer</span><span class="zamt" style="color:var(--accent)">500 €</span></div>
+    <div class="zr" style="background:var(--surface2);cursor:default"><span class="zname" style="font-size:11px;color:var(--text2)">→ Töpfe danach automatisch wiederaufbauen</span></div>
+  </div>
+</div>
+
+<!-- MEHR -->
+
+<div class="page" id="page-mehr">
+  <div class="ph"><div class="ph-title">MEHR</div><div class="ph-sub"><span>Archiv & Regeln</span></div></div>
+  <div class="sl">Monatsarchiv</div>
+  <div class="tbl" id="archiv-list"></div>
+  <div class="sl">Systemregeln</div>
+  <div class="tbl">
+    <div class="rr" style="border-top:none"><div class="rd" style="background:var(--accent)"></div><div><div class="rt">Fixkosten = Pflicht</div><div class="rs">Immer zuerst – nicht verhandelbar</div></div></div>
+    <div class="rr"><div class="rd" style="background:var(--accent)"></div><div><div class="rt">Töpfe = Pflicht</div><div class="rs">Wie Fixkosten fest eingeplant</div></div></div>
+    <div class="rr"><div class="rd" style="background:var(--warn)"></div><div><div class="rt">Leben = steuerbar</div><div class="rs">Hier liegt die Flexibilität</div></div></div>
+    <div class="rr"><div class="rd" style="background:var(--danger)"></div><div><div class="rt">Giro darf nicht ins Minus</div><div class="rs">Absolute Grenze</div></div></div>
+    <div class="rr"><div class="rd" style="background:var(--ok)"></div><div><div class="rt">Kreislauf-Prinzip</div><div class="rs">Töpfe nach Nutzung automatisch wiederaufbauen</div></div></div>
+  </div>
+  <div class="sl">Topf-Grenzen</div>
+  <div class="tbl">
+    <div class="gr" style="border-top:none"><span class="gn">Giro</span><span class="gk">&lt;300</span><span class="go">300–1.000</span><span class="gd">&gt;1.000</span></div>
+    <div class="gr"><span class="gn">Auto Topf ★</span><span class="gk">&lt;1.200</span><span class="go">1.200–2.700</span><span class="gd">&gt;2.700</span></div>
+    <div class="gr"><span class="gn">Versicherung</span><span class="gk">&lt;85</span><span class="go">85–300</span><span class="gd">&gt;300</span></div>
+    <div class="gr"><span class="gn">Notgroschen</span><span class="gk">&lt;500</span><span class="go">500–1.500</span><span class="gd">&gt;1.500</span></div>
+    <div class="gr"><span class="gn">Urlaub</span><span class="gk">&lt;1.000</span><span class="go">1.000–3.000</span><span class="gd">&gt;3.000</span></div>
+  </div>
+  <div class="gz"><div class="gz-m">Das System trägt sich selbst.</div><div class="gz-s">Keine Altlasten · Töpfe zahlen alles<br>Giro bleibt stabil · Keine Überraschungen</div></div>
+</div>
+
+<!-- TAB BAR -->
+
+<nav class="tab-bar">
+  <button class="tab-btn active" onclick="go('dash',this)"><span class="tab-icon">◎</span><span>Board</span></button>
+  <button class="tab-btn" onclick="go('input',this)"><span class="tab-icon">✎</span><span>Eingabe</span></button>
+  <button class="tab-btn" onclick="go('zahlung',this)"><span class="tab-icon">≡</span><span>Zahlungen</span></button>
+  <button class="tab-btn" onclick="go('peak',this)"><span class="tab-icon">⚡</span><span>Peaks</span></button>
+  <button class="tab-btn" onclick="go('mehr',this)"><span class="tab-icon">◈</span><span>Mehr</span></button>
+</nav>
+
+<!-- MODAL: ZAHLUNG -->
+
+<div class="mo hidden" id="modal-z">
+  <div class="mb">
+    <div class="mt" id="mz-title">Zahlung hinzufügen</div>
+    <div class="mf"><label>Datum (z.B. 15. oder 30.03.)</label><input type="text" id="mz-dat" placeholder="15."></div>
+    <div class="mf"><label>Bezeichnung</label><input type="text" id="mz-nam" placeholder="z.B. Werkstatt"></div>
+    <div class="mf"><label>Betrag (€)</label><input type="number" id="mz-bet" inputmode="decimal" placeholder="0.00" step="0.01"></div>
+    <div class="mf"><label>Kategorie</label>
+      <select id="mz-top">
+        <option value="Giro">Fixkosten (Giro)</option>
+        <option value="Auto">Auto Topf</option>
+        <option value="Versicherung">Versicherungstopf</option>
+        <option value="Leben">Leben</option>
+        <option value="Altlast">Altlast</option>
+        <option value="Urlaub">Urlaubstopf</option>
+      </select>
+    </div>
+    <div class="tog-row">
+      <div><div class="tog-l">Wiederkehrend</div><div class="tog-s">Automatisch in nächsten Monat übernehmen</div></div>
+      <button class="tog" id="mz-rec" onclick="this.classList.toggle('on')"></button>
+    </div>
+    <input type="hidden" id="mz-id">
+    <div class="mbtns">
+      <button class="btn bs" onclick="closeM('modal-z')">Abbrechen</button>
+      <button class="btn ba" onclick="saveZ()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: PEAK -->
+
+<div class="mo hidden" id="modal-p">
+  <div class="mb">
+    <div class="mt" id="mp-title">Peak hinzufügen</div>
+    <div class="mf"><label>Monat / Zeitraum</label><input type="text" id="mp-mon" placeholder="z.B. Mai 2026"></div>
+    <div class="mf"><label>Betrag (€)</label><input type="number" id="mp-bet" inputmode="decimal" placeholder="0.00" step="0.01"></div>
+    <div class="mf"><label>Bereich</label><input type="text" id="mp-ber" placeholder="z.B. Auto, Strafe"></div>
+    <div class="mf"><label>Notiz</label><input type="text" id="mp-not" placeholder="z.B. Jahresinspektion"></div>
+    <input type="hidden" id="mp-id">
+    <div class="mbtns">
+      <button class="btn bs" onclick="closeM('modal-p')">Abbrechen</button>
+      <button class="btn ba" onclick="saveP()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: NEUER MONAT -->
+
+<div class="mo hidden" id="modal-nm">
+  <div class="mb">
+    <div class="mt">Neuen Monat starten</div>
+    <div class="mf"><label>Monat</label>
+      <select id="nm-m">
+        <option value="1">Januar</option><option value="2">Februar</option><option value="3">März</option>
+        <option value="4">April</option><option value="5">Mai</option><option value="6">Juni</option>
+        <option value="7">Juli</option><option value="8">August</option><option value="9">September</option>
+        <option value="10">Oktober</option><option value="11">November</option><option value="12">Dezember</option>
+      </select>
+    </div>
+    <div class="mf"><label>Jahr</label><input type="number" id="nm-j" value="2026" min="2024" max="2035"></div>
+    <div style="font-size:12px;color:var(--text2);line-height:1.7;margin-bottom:8px">Alle <b style="color:var(--accent)">wiederkehrenden</b> Zahlungen werden übernommen, einmalige nicht.</div>
+    <div class="mbtns">
+      <button class="btn bs" onclick="closeM('modal-nm')">Abbrechen</button>
+      <button class="btn ba" onclick="createMonth()">Erstellen</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const MN = ['','Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+const LIM = {giro:{k:300,o:1000},auto:{k:1200,o:2700},vers:{k:85,o:300},not:{k:500,o:1500},urlaub:{k:1000,o:3000}};
+const TGT = {giro:1000,auto:2700,not:1500,urlaub:3000};
+const TXT = {
+  giro:{k:'Giro unter Druck',o:'Giro im Zielbereich',d:'Überschuss umleiten'},
+  auto:{k:'Infrastruktur gefährdet',o:'Auto Topf stabil',d:'Auto Topf voll'},
+  vers:{k:'Versicherungen ungedeckt',o:'Versicherung gedeckt',d:'Versicherung OK'},
+  not:{k:'Sicherheitsnetz zu klein',o:'Notgroschen OK',d:'Investieren?'},
+  urlaub:{k:'Keine Erholungsreserve',o:'Urlaub planbar',d:'Urlaub Topf voll'}
+};
+
+const STD_Z = [
+  {datum:'30.03.',name:'Vodafone',betrag:67.97,topf:'Giro',paid:false,rec:true},
+  {datum:'31.03.',name:'LBS',betrag:30.00,topf:'Giro',paid:false,rec:true},
+  {datum:'01.',name:'Condor',betrag:118.30,topf:'Giro',paid:false,rec:true},
+  {datum:'01.',name:'WWK',betrag:41.00,topf:'Giro',paid:false,rec:true},
+  {datum:'07.',name:'DAZN',betrag:9.99,topf:'Giro',paid:false,rec:true},
+  {datum:'07.',name:'Finanzguru',betrag:2.99,topf:'Giro',paid:false,rec:true},
+  {datum:'14.',name:'Apple',betrag:34.95,topf:'Giro',paid:false,rec:true},
+  {datum:'14.',name:'LVB',betrag:15.00,topf:'Giro',paid:false,rec:true},
+  {datum:'17.',name:'Tado',betrag:3.99,topf:'Giro',paid:false,rec:true},
+  {datum:'17.',name:'Mobilcom',betrag:7.99,topf:'Giro',paid:false,rec:true},
+  {datum:'19.',name:'Preply',betrag:129.86,topf:'Giro',paid:false,rec:true},
+  {datum:'20.',name:'Kreditkarte',betrag:2.49,topf:'Giro',paid:false,rec:true},
+  {datum:'23.',name:'KS Auxilia',betrag:23.95,topf:'Giro',paid:false,rec:true},
+  {datum:'23.',name:'ChatGPT',betrag:7.99,topf:'Giro',paid:false,rec:true},
+  {datum:'15.',name:'GEZ',betrag:55.08,topf:'Versicherung',paid:false,rec:true},
+  {datum:'31.',name:'Disney',betrag:159.00,topf:'Versicherung',paid:false,rec:true},
+  {datum:'10.',name:'Tanken',betrag:380.00,topf:'Leben',paid:false,rec:true},
+  {datum:'30.',name:'Lebensmittel',betrag:400.00,topf:'Leben',paid:false,rec:true},
+  {datum:'30.',name:'Lifestyle',betrag:300.00,topf:'Leben',paid:false,rec:true},
+  {datum:'01.',name:'Werkstatt',betrag:800.00,topf:'Auto',paid:false,rec:false},
+  {datum:'19.',name:'Ebay Autositz',betrag:164.50,topf:'Auto',paid:false,rec:false},
+  {datum:'22.',name:'Sensor',betrag:83.85,topf:'Auto',paid:false,rec:false},
+  {datum:'22.',name:'OBD',betrag:149.50,topf:'Auto',paid:false,rec:false},
+  {datum:'22.',name:'Sensor Amazon',betrag:79.99,topf:'Auto',paid:false,rec:false},
+  {datum:'30.03.',name:'Amazon (Altlast)',betrag:270.51,topf:'Altlast',paid:true,rec:false},
+  {datum:'01.',name:'Getkapp (Altlast)',betrag:119.85,topf:'Altlast',paid:true,rec:false},
+  {datum:'02.',name:'Apotheke (Altlast)',betrag:81.71,topf:'Altlast',paid:false,rec:false},
+  {datum:'12.',name:'Getkapp 2 (Altlast)',betrag:119.85,topf:'Altlast',paid:false,rec:false},
+  {datum:'14.',name:'Mietwagen (Altlast)',betrag:213.01,topf:'Altlast',paid:false,rec:false},
+];
+
+const STD_P = [
+  {id:'p1',monat:'Mai 2026',betrag:1500,bereich:'Strafe',notiz:'⚠ Strafe – Peak-Strategie aktiv'},
+  {id:'p2',monat:'Juni 2026',betrag:406,bereich:'Auto',notiz:'Regelmäßige Kosten'},
+  {id:'p3',monat:'Juli 2026',betrag:400,bereich:'Auto',notiz:'Regelmäßige Kosten'},
+  {id:'p4',monat:'August 2026',betrag:800,bereich:'Auto',notiz:'Größere Reparatur geplant'},
+  {id:'p5',monat:'Januar 2027',betrag:1200,bereich:'Auto',notiz:'Jahreskosten / Steuer'},
+];
+
+function ls(){try{return JSON.parse(localStorage.getItem('fb4')||'null');}catch(e){return null;}}
+function ss(s){localStorage.setItem('fb4',JSON.stringify(s));}
+function init(){
+  const sv=ls();
+  if(sv)return sv;
+  const s={am:'2026-04',gt:27,monate:{'2026-04':{label:'April 2026',k:{giro:null,auto:null,vers:null,not:null,urlaub:null},lu:null,z:STD_Z.map((x,i)=>({...x,id:'z'+i}))}},peaks:JSON.parse(JSON.stringify(STD_P))};
+  ss(s);return s;
+}
+let S=init();
+
+// NAV
+function go(id,btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  btn.classList.add('active');
+  window.scrollTo({top:0,behavior:'instant'});
+  if(id==='zahlung')renderZ();
+  if(id==='peak')renderP();
+  if(id==='mehr')renderA();
+  if(id==='dash')renderD();
+}
+
+function mkeys(){return Object.keys(S.monate).sort();}
+function prevM(){const k=mkeys(),i=k.indexOf(S.am);if(i>0){S.am=k[i-1];ss(S);refresh();}}
+function nextM(){const k=mkeys(),i=k.indexOf(S.am);if(i<k.length-1){S.am=k[i+1];ss(S);refresh();}}
+function refresh(){renderD();renderZ();setLabels();loadIn();}
+
+function setLabels(){
+  const m=S.monate[S.am];const l=m?m.label:S.am;
+  ['lbl-dash','lbl-input','lbl-zahlung'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent=l;});
+}
+
+// FREIES GIRO
+function calcFrei(m){
+  if(!m||m.k.giro===null)return null;
+  const g=m.k.giro;
+  const fix=m.z.filter(x=>!x.paid&&x.topf==='Giro').reduce((s,x)=>s+x.betrag,0);
+  const topf=m.z.filter(x=>!x.paid&&['Auto','Versicherung','Urlaub'].includes(x.topf)).reduce((s,x)=>s+x.betrag,0);
+  return{g,fix,topf,frei:g-fix-topf};
+}
+
+function nextGehalt(){
+  const t=new Date(),tag=S.gt||27;
+  let d=new Date(t.getFullYear(),t.getMonth(),tag);
+  if(d<=t)d=new Date(t.getFullYear(),t.getMonth()+1,tag);
+  return d;
+}
+
+// DASHBOARD
+function zone(key,v){if(v<LIM[key].k)return'k';if(v>LIM[key].o)return'd';return'o';}
+function zc(z){return z==='k'?'var(--danger)':z==='d'?'var(--warn)':'var(--ok)';}
+
+function renderD(){
+  const m=S.monate[S.am];if(!m)return;
+  const k=m.k;
+  setLabels();
+
+  if(m.lu){const d=new Date(m.lu);document.getElementById('lbl-update').textContent=d.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'})+' '+d.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});}
+
+  // Freies Giro
+  const fr=calcFrei(m);
+  if(fr!==null){
+    const fc=fr.frei<0?'var(--danger)':fr.frei<300?'var(--warn)':'var(--ok)';
+    document.getElementById('frei-card').style.setProperty('--fc',fc);
+    document.getElementById('frei-amt').textContent=fmt(fr.frei);
+    document.getElementById('frei-amt').style.color=fc;
+    const ng=nextGehalt();
+    document.getElementById('frei-period').textContent='bis '+ng.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'});
+    document.getElementById('frei-detail').innerHTML=
+      `<b>${fmt(fr.g)}</b> Giro &minus; <b style="color:var(--danger)">${fmt(fr.fix)}</b> offene Fix &minus; <b style="color:var(--warn)">${fmt(fr.topf)}</b> offene Töpfe`;
+    document.getElementById('fc-giro').textContent=fmt(fr.g);
+    document.getElementById('fc-fix').textContent='−'+fmt(fr.fix);
+    document.getElementById('fc-topf').textContent='−'+fmt(fr.topf);
+  }
+
+  // Töpfe
+  const keys=['giro','auto','vers','not','urlaub'];
+  const zones={};
+  keys.forEach(key=>{
+    const v=k[key];
+    const card=document.getElementById('tc-'+key);
+    if(v===null){card.style.setProperty('--c','var(--border)');document.getElementById('tv-'+key).textContent='– €';document.getElementById('tb-'+key).textContent='–';document.getElementById('td-'+key).textContent='Noch kein Stand';document.getElementById('bar-'+key).style.width='0%';return;}
+    const z=zone(key,v);zones[key]=z;
+    const c=zc(z);
+    const pct=z==='k'?Math.max(2,(v/LIM[key].k)*40):z==='d'?100:40+((v-LIM[key].k)/(LIM[key].o-LIM[key].k))*60;
+    card.style.setProperty('--c',c);
+    document.getElementById('tv-'+key).textContent=fmt(v);
+    document.getElementById('tb-'+key).textContent=z==='k'?'⚠ KRITISCH':z==='d'?'▲ DECKEL':'✓ OK';
+    document.getElementById('td-'+key).textContent=TXT[key][z==='k'?'k':z==='d'?'d':'o'];
+    document.getElementById('bar-'+key).style.width=Math.min(100,pct)+'%';
+  });
+
+  // Progress
+  [['giro',1000],['auto',2700],['not',1500],['urlaub',3000]].forEach(([key,t])=>{
+    if(k[key]===null)return;
+    const p=Math.min(100,Math.round((k[key]/t)*100));
+    document.getElementById('pg-'+key).style.width=p+'%';
+    document.getElementById('pp-'+key).textContent=p+'%';
+  });
+
+  // Banner
+  const zl=Object.values(zones);
+  const cr=zl.filter(z=>z==='k').length,dc=zl.filter(z=>z==='d').length;
+  let txt,bc,bg;
+  if(!zl.length){txt='Kontostände eingeben →';bc='var(--border)';bg='var(--surface)';}
+  else if(cr>=3){txt='🔴 System unter Druck – sofort prüfen';bc='var(--danger)';bg='#1e0808';}
+  else if(cr>=1){txt='🟡 Teilweise kritisch – Töpfe prüfen';bc='var(--warn)';bg='#1e1608';}
+  else if(dc>=2){txt='🟢 Töpfe voll – Überschuss umleiten';bc='var(--accent)';bg='#141e08';}
+  else{txt='🟢 System stabil – Kreislauf läuft';bc='var(--ok)';bg='#081e10';}
+  const ban=document.getElementById('sys-banner');
+  ban.style.borderColor=bc;ban.style.background=bg;
+  document.getElementById('sys-dot').style.background=bc;
+  document.getElementById('sys-txt').textContent=txt;
+
+  // Fazit
+  const anyCrit=cr>0,allOk=zl.length===5&&zl.every(z=>z==='o');
+  document.getElementById('fazit').textContent=!zl.length?'Kontostände eingeben um zu starten':anyCrit?'Handlungsbedarf – Töpfe kontrollieren.':allOk?'System trägt sich selbst. ✓':'System läuft – weiter beobachten.';
+}
+
+// EINGABE SPEICHERN
+function saveKonto(){
+  const m=S.monate[S.am];if(!m)return;
+  ['giro','auto','vers','not','urlaub'].forEach(key=>{
+    const v=parseFloat(document.getElementById('in-'+key).value);
+    m.k[key]=isNaN(v)?null:v;
+  });
+  m.lu=new Date().toISOString();
+  ss(S);renderD();
+  go('dash',document.querySelector('.tab-btn'));
+}
+function saveGehalt(){
+  const v=parseInt(document.getElementById('in-gehalt').value);
+  if(!isNaN(v)&&v>=1&&v<=31){S.gt=v;ss(S);alert('Gespeichert: Gehalt kommt ca. am '+v+'. des Monats');}
+}
+function loadIn(){
+  const m=S.monate[S.am];if(!m)return;
+  const km=['giro','auto','vers','not','urlaub'];
+  km.forEach(key=>{const e=document.getElementById('in-'+key);if(e)e.value=m.k[key]!==null?m.k[key]:'';});
+  document.getElementById('in-gehalt').value=S.gt||27;
+}
+
+// ZAHLUNGEN
+function pillClass(t){return{Giro:'pg',Auto:'pa',Versicherung:'pv',Altlast:'pl',Urlaub:'pu',Leben:'plb'}[t]||'plb';}
+function renderZ(){
+  const m=S.monate[S.am];
+  const c=document.getElementById('zahlung-content');
+  if(!m){c.innerHTML='<div style="padding:14px;color:var(--text2);font-size:13px">Kein Monat geladen</div>';return;}
+  const grps={Fixkosten:m.z.filter(x=>x.topf==='Giro'),Versicherungstopf:m.z.filter(x=>x.topf==='Versicherung'),Autotopf:m.z.filter(x=>x.topf==='Auto'),Urlaubstopf:m.z.filter(x=>x.topf==='Urlaub'),Leben:m.z.filter(x=>x.topf==='Leben'),Altlasten:m.z.filter(x=>x.topf==='Altlast')};
+  const tMap={Fixkosten:'Giro',Versicherungstopf:'Versicherung',Autotopf:'Auto',Urlaubstopf:'Urlaub',Leben:'Leben',Altlasten:'Altlast'};
+  let h='';
+  for(const[g,items]of Object.entries(grps)){
+    const tot=items.reduce((s,x)=>s+x.betrag,0);
+    h+=`<div class="tbl" style="margin-bottom:10px">`;
+    h+=`<div class="gh"><span>${g.toUpperCase()} · ${fmt(tot)}</span><button class="ab" onclick="showZModal(null,'${tMap[g]}')">+ Add</button></div>`;
+    if(!items.length)h+=`<div style="padding:12px 14px;font-size:12px;color:var(--text2)">Keine Einträge</div>`;
+    items.forEach(z=>{
+      h+=`<div class="zr" onclick="showZModal('${z.id}')">
+        <button class="zck ${z.paid?'done':''}" onclick="event.stopPropagation();togglePaid('${z.id}')">✓</button>
+        <span class="zdate">${z.datum}</span>
+        <span class="zname ${z.paid?'dt':''}">${z.name}</span>
+        <span class="pill ${pillClass(z.topf)}">${z.topf}</span>
+        ${z.rec?'<span class="zrec" title="Wiederkehrend">↻</span>':''}
+        <span class="zamt">−${fmt(z.betrag)}</span>
+        <button class="zdel" onclick="event.stopPropagation();delZ('${z.id}')">×</button>
+      </div>`;
+    });
+    h+=`</div>`;
+  }
+  c.innerHTML=h;
+}
+function togglePaid(id){const m=S.monate[S.am];const z=m.z.find(x=>x.id===id);if(z){z.paid=!z.paid;ss(S);renderZ();}}
+function delZ(id){const m=S.monate[S.am];m.z=m.z.filter(x=>x.id!==id);ss(S);renderZ();}
+
+function showZModal(id,defTopf){
+  document.getElementById('mz-title').textContent=id?'Zahlung bearbeiten':'Zahlung hinzufügen';
+  document.getElementById('mz-id').value=id||'';
+  const rec=document.getElementById('mz-rec');
+  if(id){
+    const z=S.monate[S.am].z.find(x=>x.id===id);
+    document.getElementById('mz-dat').value=z.datum;
+    document.getElementById('mz-nam').value=z.name;
+    document.getElementById('mz-bet').value=z.betrag;
+    document.getElementById('mz-top').value=z.topf;
+    z.rec?rec.classList.add('on'):rec.classList.remove('on');
+  }else{
+    document.getElementById('mz-dat').value='';
+    document.getElementById('mz-nam').value='';
+    document.getElementById('mz-bet').value='';
+    document.getElementById('mz-top').value=defTopf||'Giro';
+    rec.classList.remove('on');
+  }
+  document.getElementById('modal-z').classList.remove('hidden');
+}
+function saveZ(){
+  const m=S.monate[S.am];
+  const id=document.getElementById('mz-id').value;
+  const datum=document.getElementById('mz-dat').value.trim();
+  const name=document.getElementById('mz-nam').value.trim();
+  const betrag=parseFloat(document.getElementById('mz-bet').value);
+  const topf=document.getElementById('mz-top').value;
+  const rec=document.getElementById('mz-rec').classList.contains('on');
+  if(!name||isNaN(betrag))return;
+  if(id){const z=m.z.find(x=>x.id===id);if(z){z.datum=datum;z.name=name;z.betrag=betrag;z.topf=topf;z.rec=rec;}}
+  else{m.z.push({id:'z'+Date.now(),datum,name,betrag,topf,paid:false,rec});}
+  ss(S);closeM('modal-z');renderZ();
+}
+
+// PEAKS
+function renderP(){
+  const l=document.getElementById('peak-list');
+  if(!S.peaks.length){l.innerHTML='<div style="padding:14px;font-size:13px;color:var(--text2)">Keine Peaks eingetragen</div>';return;}
+  l.innerHTML=S.peaks.map(p=>`
+    <div class="pi">
+      <div><div class="pi-m">${p.monat}</div><div class="pi-n">${p.notiz||''}</div></div>
+      <div class="pi-r">
+        <div class="pi-a">${fmtS(p.betrag)}</div>
+        <div style="display:flex;gap:5px;align-items:center">
+          <span class="pi-b">${p.bereich}</span>
+          <button style="background:none;border:none;color:var(--text2);font-size:14px;cursor:pointer" onclick="showPeakModal('${p.id}')">✎</button>
+          <button style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer" onclick="delP('${p.id}')">×</button>
+        </div>
+      </div>
+    </div>`).join('');
+}
+function showPeakModal(id){
+  document.getElementById('mp-title').textContent=id?'Peak bearbeiten':'Peak hinzufügen';
+  document.getElementById('mp-id').value=id||'';
+  if(id){const p=S.peaks.find(x=>x.id===id);document.getElementById('mp-mon').value=p.monat;document.getElementById('mp-bet').value=p.betrag;document.getElementById('mp-ber').value=p.bereich;document.getElementById('mp-not').value=p.notiz||'';}
+  else{document.getElementById('mp-mon').value='';document.getElementById('mp-bet').value='';document.getElementById('mp-ber').value='';document.getElementById('mp-not').value='';}
+  document.getElementById('modal-p').classList.remove('hidden');
+}
+function saveP(){
+  const id=document.getElementById('mp-id').value;
+  const monat=document.getElementById('mp-mon').value.trim();
+  const betrag=parseFloat(document.getElementById('mp-bet').value);
+  const bereich=document.getElementById('mp-ber').value.trim();
+  const notiz=document.getElementById('mp-not').value.trim();
+  if(!monat||isNaN(betrag))return;
+  if(id){const p=S.peaks.find(x=>x.id===id);if(p){p.monat=monat;p.betrag=betrag;p.bereich=bereich;p.notiz=notiz;}}
+  else S.peaks.push({id:'p'+Date.now(),monat,betrag,bereich,notiz});
+  ss(S);closeM('modal-p');renderP();
+}
+function delP(id){S.peaks=S.peaks.filter(x=>x.id!==id);ss(S);renderP();}
+
+// NEUER MONAT
+function showNewMonth(){
+  const n=new Date();
+  let nm=n.getMonth()+2;let nj=n.getFullYear();
+  if(nm>12){nm=1;nj++;}
+  document.getElementById('nm-m').value=nm;
+  document.getElementById('nm-j').value=nj;
+  document.getElementById('modal-nm').classList.remove('hidden');
+}
+function createMonth(){
+  const m=parseInt(document.getElementById('nm-m').value);
+  const j=parseInt(document.getElementById('nm-j').value);
+  const key=`${j}-${String(m).padStart(2,'0')}`;
+  if(S.monate[key]){closeM('modal-nm');S.am=key;ss(S);refresh();return;}
+  const curM=S.monate[S.am];
+  const recZ=curM?curM.z.filter(x=>x.rec).map((x,i)=>({...x,id:'z'+Date.now()+i,paid:false})):[];
+  S.monate[key]={label:`${MN[m]} ${j}`,k:{giro:null,auto:null,vers:null,not:null,urlaub:null},lu:null,z:recZ};
+  S.am=key;ss(S);closeM('modal-nm');refresh();
+}
+
+// ARCHIV
+function renderA(){
+  const keys=mkeys().reverse();
+  const el=document.getElementById('archiv-list');
+  if(keys.length<=1){el.innerHTML='<div style="padding:14px;font-size:13px;color:var(--text2)">Noch keine weiteren Monate</div>';return;}
+  el.innerHTML=keys.map(k=>{
+    const m=S.monate[k];
+    const paid=m.z.filter(x=>x.paid).length,tot=m.z.length;
+    const act=k===S.am;
+    return`<div class="ai">
+      <div><div class="aim">${m.label}${act?' <span style="font-size:9px;color:var(--accent)">(aktiv)</span>':''}</div><div class="ais">${paid}/${tot} Zahlungen erledigt</div></div>
+      <button class="ail" onclick="loadMonth('${k}')">Laden</button>
+    </div>`;
+  }).join('');
+}
+function loadMonth(key){S.am=key;ss(S);refresh();go('dash',document.querySelector('.tab-btn'));}
+
+// EXPORT / IMPORT
+function exportData(){
+  const b=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});
+  const u=URL.createObjectURL(b);
+  const a=document.createElement('a');a.href=u;a.download=`finanz-backup-${new Date().toISOString().slice(0,10)}.json`;a.click();URL.revokeObjectURL(u);
+}
+function importData(e){
+  const f=e.target.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=ev=>{try{S=JSON.parse(ev.target.result);ss(S);refresh();alert('Import erfolgreich!');}catch(err){alert('Fehler beim Import');}};
+  r.readAsText(f);
+}
+
+// MODAL
+function closeM(id){document.getElementById(id).classList.add('hidden');}
+document.querySelectorAll('.mo').forEach(el=>el.addEventListener('click',e=>{if(e.target===el)el.classList.add('hidden');}));
+
+// UTILS
+function fmt(v){return v.toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2})+' €';}
+function fmtS(v){return v.toLocaleString('de-DE',{minimumFractionDigits:0,maximumFractionDigits:0})+' €';}
+
+// INIT
+setLabels();loadIn();renderD();
+</script>
+
+</body>
+</html>
